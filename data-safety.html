@@ -4,64 +4,98 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="DueYou Data Safety Summary for Google Play and users.">
-  <title>Data Safety Summary | DueYou</title>
+  <title>Data Safety | DueYou</title>
+  <meta name="description" content="This page explains DueYou’s data setup in plain terms, especially for Google Play Data Safety and anyone who wants the no-nonsense version.">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <a class="skip" href="#main">Skip to content</a>
+  <a class="skip-link" href="#main">Skip to content</a>
+
   <header class="site-header">
-    <div class="wrap header-grid">
-      <a class="brand" href="index.html" aria-label="DueYou legal and support home">
+    <div class="shell header-inner">
+      <a class="brand" href="index.html" aria-label="DueYou home">
         <span class="brand-mark" aria-hidden="true">✓</span>
-        <span>
-          <strong>DueYou</strong>
-          <small>Bills, renewals, and less money-admin nonsense.</small>
-        </span>
+        <span class="brand-text">DueYou</span>
       </a>
-      
-      <nav class="topnav" aria-label="Main pages">
-        <a href="index.html">Home</a>
-        <a href="privacy.html">Privacy</a>
-        <a href="terms.html">Terms</a>
-        <a href="data-safety.html" aria-current="page">Data safety</a>
-        <a href="support.html">Support</a>
+      <nav class="site-nav" aria-label="Main navigation">
+          <a class="nav-link " href="index.html">Home</a>
+          <a class="nav-link " href="privacy.html">Privacy</a>
+          <a class="nav-link " href="terms.html">Terms</a>
+          <a class="nav-link " href="support.html">Support</a>
+          <a class="nav-link active" href="data-safety.html" aria-current="page">Data Safety</a>
       </nav>
     </div>
   </header>
-  <main id="main" class="wrap page">
+
+  <main id="main" class="shell">
+    <section class="hero">
+      <p class="kicker">Data Safety</p>
+      <h1>A simple map of what stays local and what may leave.</h1>
+      <p class="lead">This page explains DueYou’s data setup in plain terms, especially for Google Play Data Safety and anyone who wants the no-nonsense version.</p>
+      <div class="badges" aria-label="Key points">
+        <span class="badge">Local records</span>
+<span class="badge">User-controlled exports</span>
+<span class="badge">Support by email</span>
+<span class="badge">Website hosting</span>
+<span class="badge">Future payment rails</span>
+      </div>
+      <p class="meta">Last updated: <strong>25 June 2026</strong> <span aria-hidden="true">•</span> Contact: <a href="mailto:dueyouapp@gmail.com">dueyouapp@gmail.com</a></p>
+    </section>
+
     
-<section class="hero legal-hero">
-  <p class="eyebrow">Data Safety Summary</p>
-  <h1>What leaves your phone, what does not, and why.</h1>
-  <p class="lead">This page is written to match DueYou’s local-first design and help explain the Google Play Data Safety answers in normal human language.</p>
-  <p class="meta">Last updated: 25 June 2026 • Contact: <a href="mailto:dueyouapp@gmail.com">dueyouapp@gmail.com</a></p>
-</section>
+    <section class="panel">
+      <h2>Quick version</h2>
+      <p>DueYou is local-first. The bill, renewal, trial, savings and goal records you add are stored on your device during normal use.</p>
+      <p>We have not added ads, analytics trackers, behavioural tracking, bank links, email scanning, GPS tracking, account login or cloud sync. If you choose exports, backups, support emails, website visits or future paid features, data may go to the service needed for that action.</p>
+    </section>
 
-<section class="summary-card">
-  <h2>Plain-English summary</h2>
-  <p>Current app use is local-first. Your tracked bills, renewals, goals, and savings notes stay on your phone during normal use. We have not added ads, analytics SDKs, behavioural tracking, bank links, account login, cloud sync, email scanning, GPS collection, or data-selling tools.</p>
-</section>
+    <section class="panel">
+      <h2>Data map</h2>
+      <div class="table-wrap"><table><tr><th>User-added bill and renewal records</th><td>Stored locally on your device during normal use.</td></tr>
+<tr><th>Savings notes and goals</th><td>Stored locally on your device during normal use.</td></tr>
+<tr><th>Exports and backups</th><td>Only leave the device if you choose to export, back up, send or store them elsewhere.</td></tr>
+<tr><th>Support emails</th><td>Sent to us only if you choose to contact support.</td></tr>
+<tr><th>Website visits</th><td>Handled by GitHub Pages and normal browser/hosting systems.</td></tr>
+<tr><th>Future paid features</th><td>If enabled, purchase and access data may be handled by Google Play Billing and payment/access rails.</td></tr></table></div>
+    </section>
 
-<section class="section"><h2>1. Current app data map</h2><div class="table-wrap"><table><thead><tr><th>Data or action</th><th>Current handling</th><th>Plain meaning</th></tr></thead><tbody><tr><td>Bills, renewals, subscriptions, trials, notes</td><td>Stored locally on your device during normal use.</td><td>You add it. Your phone keeps it.</td></tr><tr><td>Goals, Money Freed records, category caps</td><td>Stored locally on your device during normal use.</td><td>Used for app features, not advertising.</td></tr><tr><td>Ads and behavioural tracking</td><td>Not added.</td><td>No ad network, profiling, or behaviour-monitoring setup.</td></tr><tr><td>Bank, email, GPS, contacts, SMS</td><td>Not used.</td><td>The app does not need those to do its job.</td></tr><tr><td>Support email</td><td>Only if you contact us.</td><td>We see what you choose to send.</td></tr><tr><td>Website visit</td><td>Website host may process technical logs.</td><td>Normal website hosting/security data.</td></tr><tr><td>Future paid features</td><td>Google Play and payment/access rails may process purchase data.</td><td>Needed to unlock paid features if added.</td></tr></tbody></table></div></section>
+    <section class="panel">
+      <h2>What is not in the current app</h2>
+      <ul class="check-list">
+        <li>No ads SDK.</li>
+        <li>No analytics SDK.</li>
+        <li>No behaviour tracking.</li>
+        <li>No bank connection.</li>
+        <li>No email scanning.</li>
+        <li>No GPS tracking.</li>
+        <li>No account login.</li>
+        <li>No cloud sync.</li>
+        <li>No selling personal data.</li>
+      </ul>
+    </section>
 
-<section class="section"><h2>2. How this lines up with Google Play wording</h2><p>Google Play treats data as “collected” when it is transmitted off a user’s device. Google also says local-only processing on the user’s device does not need to be declared as collected.</p><p>That is why local bill entries are different from support emails, website visits, exports, or payment checks. Local entries stay on your phone during normal use. The other actions may involve another service because you chose to send something, visit a site, or use a paid feature.</p></section>
+    <section class="panel">
+      <h2>How to read this with Google Play Data Safety</h2>
+      <p>Local-only app records are different from data collected by a developer. If information stays on the user’s device during normal use, it is not the same as us collecting it from the device.</p>
+      <p>Separate actions, such as support emails, exports, website visits and payment/access rails, are explained separately because they may involve other services.</p>
+    </section>
 
-<section class="section"><h2>3. Data we do not collect for the current app</h2><ul class="check-list"><li>Location data.</li><li>Contacts.</li><li>Photos or videos.</li><li>Audio recordings.</li><li>Emails or SMS.</li><li>Bank account logins.</li><li>Credit card numbers.</li><li>Advertising ID for ad tracking.</li><li>Behaviour profiles.</li><li>App analytics about what buttons you press.</li></ul></section>
-
-<section class="section"><h2>4. User-controlled sharing</h2><p>If you export, back up, share, or email information, that action may send data outside the app. That is user-controlled sharing. Choose the destination carefully and blank out sensitive information before contacting support.</p></section>
-
-<section class="section"><h2>5. Future payment/access rails</h2><p>If DueYou adds paid features, Google Play Billing and payment/access rails may process the minimum purchase and entitlement data needed to confirm payment and unlock paid features. That may include product IDs, purchase tokens, subscription status, entitlement status, device/app version, and similar technical purchase-check information.</p><p>DueYou does not receive full card details from Google Play. If paid features go live, the Play Data Safety form should be checked again before release.</p></section>
-
-<section class="section"><h2>6. Service providers</h2><p>Some services may be needed to publish, support, host, or take payment for DueYou. Examples include Google Play, website hosting, email support, and payment/access rails. These providers should only be used for the job they are needed for, not to build advertising profiles from your bill records.</p></section>
-
-<section class="notice good"><h2>Privacy principle</h2><p>If DueYou does not need a piece of data to help you, it should not ask for it. Less noise, less risk, less nonsense.</p></section>
+    <section class="panel">
+      <h2>Best rule of thumb</h2>
+      <p>If you type it into DueYou for your own use, it normally stays with you. If you choose to send, export, back up, email, buy or visit, the service needed for that choice may receive what it needs to complete that choice.</p>
+    </section>
 
   </main>
+
   <footer class="site-footer">
-    <div class="wrap footer-grid">
-      <p><strong>DueYou</strong> helps people keep their own bills and renewals visible. No ads. No behavioural tracking. No selling personal data.</p>
-      <p>Last updated: <strong>25 June 2026</strong><br>Contact: <a href="mailto:dueyouapp@gmail.com">dueyouapp@gmail.com</a></p>
+    <div class="shell footer-grid">
+      <div>
+        <strong>DueYou</strong>
+        <p>Practical money admin. Private by design. Useful without being nosy.</p>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Home</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="support.html">Support</a><a href="data-safety.html">Data Safety</a>
+      </div>
     </div>
   </footer>
 </body>
