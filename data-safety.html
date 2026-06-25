@@ -1,96 +1,71 @@
 <!doctype html>
-<html lang="en-GB">
+<html lang="en-IE">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="Plain-English DueYou Data Safety Summary for users and Google Play.">
-  <title>Data Safety Summary | DueYou</title>
+  <meta name="description" content="Plain-English data safety summary for DueYou: Bills &amp; Renewals.">
+  <title>Data Safety | DueYou</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to main content</a>
-<header>
-  <div class="nav">
-    <a class="logo" href="index.html" aria-label="DueYou home">
-      <span class="logo-mark" aria-hidden="true">✓</span>
-      <span class="logo-text"><strong>DueYou</strong><span>You do you. We’ll handle what’s due.</span></span>
-    </a>
-    <nav class="links" aria-label="Legal pages">
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="site-header">
+  <div class="wrap nav">
+    <a class="brand" href="index.html" aria-label="DueYou home"><span class="logo" aria-hidden="true">✓</span><span><strong>DueYou</strong><small>You do you. We’ll handle what’s due.</small></span></a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="index.html">Home</a>
       <a href="privacy.html">Privacy</a>
       <a href="terms.html">Terms</a>
-      <a href="data-safety.html">Data Safety</a>
       <a href="support.html">Support</a>
+      <a href="data-safety.html" aria-current="page">Data Safety</a>
     </nav>
   </div>
 </header>
+<main id="content">
 
-<main id="main">
+<section class="hero"><div class="wrap"><div class="hero-card">
+  <span class="kicker">🛡️ Data Safety</span>
+  <h1>The tidy map of what happens to data.</h1>
+  <p class="lead">This page explains DueYou’s data setup in simple terms. It is meant to match the privacy policy and help users understand what the app does, without needing three coffees and a law degree.</p>
+  <div class="good"><strong>Current core:</strong> no bank links, no ads, no analytics SDK, no behaviour tracking, no email scanning, no GPS profile, and no DueYou cloud account for your tracked bill data.</div>
+</div></div></section>
+<section class="wrap">
+  <h2>1. Current app data map</h2>
+  <div class="table-wrap"><table><thead><tr><th>Data area</th><th>Current DueYou handling</th><th>Plain meaning</th></tr></thead><tbody>
+    <tr><td>Bill, renewal and savings records</td><td>Stored locally on your device during normal use.</td><td>You add and manage it yourself. DueYou does not upload it to a DueYou account.</td></tr>
+    <tr><td>Bank account data</td><td>Not connected.</td><td>No bank link, no open banking feed, no card account access.</td></tr>
+    <tr><td>Email inbox data</td><td>Not accessed.</td><td>No inbox reading or receipt scanning.</td></tr>
+    <tr><td>Location data</td><td>Not needed for the core app.</td><td>No GPS profile to run bills and renewals.</td></tr>
+    <tr><td>Ads and analytics</td><td>No ads SDK or behaviour analytics SDK added.</td><td>No behavioural ad tracking or marketing profile.</td></tr>
+    <tr><td>Support emails</td><td>Only if you contact us.</td><td>Your email and anything you send are processed so we can reply.</td></tr>
+    <tr><td>Exports/backups</td><td>Only if you create or share them.</td><td>You choose where the file goes.</td></tr>
+    <tr><td>Website visit data</td><td>Handled by GitHub Pages and hosting infrastructure.</td><td>Normal technical web logs may happen when this site loads.</td></tr>
+    <tr><td>Future paid features</td><td>Only if payment features are enabled.</td><td>Google Play Billing and payment entitlement rails may process purchase/access data.</td></tr>
+  </tbody></table></div>
 
-<section class="hero">
-  <p class="eyebrow">Data Safety Summary</p>
-  <h1>What happens to your data, without the fog machine.</h1>
-  <p class="lead">This page explains DueYou’s data behaviour in plain English for users and Google Play setup.</p>
-  <p class="small"><strong>Last updated:</strong> 24 June 2026</p>
-</section>
+  <h2>2. Data we do not use for ads</h2>
+  <p>DueYou does not use your local bill list, renewal dates, savings notes or goals for behavioural advertising. We do not sell that information. We do not build a profile of your spending habits for marketers.</p>
+  <p>The app should help you mind your own business, not turn your business into somebody else’s.</p>
 
-<section class="notice good">
-  <h2>Current app summary</h2>
-  <p>During normal app use, DueYou stores tracked bills, renewals, notes, goals and savings records locally on your device. We have not added advertising SDKs, analytics SDKs, behavioural trackers, account login, bank linking, email scanning, GPS tracking or cloud sync.</p>
-</section>
+  <h2>3. Local data is not the same as collected data</h2>
+  <p>Information that stays on your device during normal use is handled locally. It is not the same as DueYou collecting it on a server.</p>
+  <p>If you choose to export, back up, share a file, email support, visit this website, or use future paid features, then those specific actions may involve data leaving your device as explained in the Privacy Policy.</p>
 
-<section class="table-wrap" aria-label="DueYou data safety table">
-  <table>
-    <thead><tr><th>Area</th><th>Current behaviour</th><th>Plain meaning</th></tr></thead>
-    <tbody>
-      <tr><td>User-entered bills and renewals</td><td>Stored locally on device</td><td>You add it. Your phone keeps it during normal use.</td></tr>
-      <tr><td>Savings records and goals</td><td>Stored locally on device</td><td>Used for Money Freed, goals and summaries.</td></tr>
-      <tr><td>Ads</td><td>Not added</td><td>No ad SDK, no ad targeting.</td></tr>
-      <tr><td>Analytics trackers</td><td>Not added</td><td>No behavioural analytics system has been added to monitor app use.</td></tr>
-      <tr><td>Bank connection</td><td>Not added</td><td>DueYou does not connect to your bank account.</td></tr>
-      <tr><td>Email scanning</td><td>Not added</td><td>DueYou does not scan your inbox.</td></tr>
-      <tr><td>Location/GPS</td><td>Not added</td><td>DueYou does not need your location.</td></tr>
-      <tr><td>Exports/backups</td><td>User-controlled</td><td>If you export or share a file, the destination you choose handles that copy.</td></tr>
-      <tr><td>Support email</td><td>User-initiated</td><td>If you email support, your email and message are handled by email providers.</td></tr>
-      <tr><td>Website visits</td><td>Hosted by GitHub Pages</td><td>GitHub/Microsoft may process normal web logs such as IP/browser details.</td></tr>
-      <tr><td>Future paid features</td><td>Payment rails only if enabled</td><td>Google Play Billing and entitlement providers may process purchase/entitlement data.</td></tr>
-    </tbody>
-  </table>
-</section>
+  <h2>4. Payment and entitlement data if paid features go live</h2>
+  <p>If paid features are enabled, payment access may be checked through Google Play Billing and payment entitlement rails. Those systems may process purchase status, product IDs, purchase tokens, transaction identifiers, app/device technical details and an app user identifier.</p>
+  <p>That does not mean DueYou receives your full payment card number. Payment card handling is managed by the app store/payment systems.</p>
 
-<section class="grid">
-  <article class="card">
-    <h2>Data collected by DueYou during normal app use</h2>
-    <p>The current app is designed so normal bill-tracking data is processed on your device and not sent to DueYou’s servers.</p>
-  </article>
-  <article class="card">
-    <h2>Data shared by user action</h2>
-    <p>If you export, back up, share a file or email support, you are choosing to send information to another app or service.</p>
-  </article>
-</section>
+  <h2>5. Future DueYou apps and related services</h2>
+  <p>If we create more apps, each app should explain its own data setup. If a related app links to this Data Safety page, the same privacy-first approach applies unless that app clearly says otherwise.</p>
+  <p>The rule is simple: if data leaves the device for an app feature, payment, support, website hosting, legal requirement or user export, it should be explained clearly.</p>
 
-<section class="card full">
-  <h2>Payment data if paid features are enabled</h2>
-  <p>If DueYou later enables paid features, payment rails may need to process purchase tokens, product IDs, entitlement state, app user IDs or similar technical purchase records. This is used to confirm whether paid features should be unlocked. It is not used for advertising.</p>
-</section>
-
-<section class="notice warn">
-  <h2>Important wording</h2>
-  <p>“DueYou does not track users for ads or analytics” does not mean “nothing is ever stored.” The app stores the bill and renewal information you choose to add on your own device. That is the whole point of the app.</p>
+  <h2>6. Safety promise</h2>
+  <div class="good"><strong>DueYou’s direction:</strong> earn trust through useful features, not through ads, behavioural tracking or data harvesting.</div>
+  <div class="warning"><strong>Reminder:</strong> This page is a plain-English summary. The full Privacy Policy and Terms of Use still apply.</div>
 </section>
 
 </main>
-<footer>
-  <p><strong>DueYou: Bills & Renewals</strong></p>
-  <p>Support: <a href="mailto:dueyouapp@gmail.com">dueyouapp@gmail.com</a></p>
-  <p class="small">These pages are written to explain DueYou clearly. They are not a substitute for professional legal advice.</p>
-  <div class="footer-links">
-    <a href="privacy.html">Privacy Policy</a>
-    <a href="terms.html">Terms of Use</a>
-    <a href="data-safety.html">Data Safety Summary</a>
-    <a href="support.html">Support</a>
-  </div>
-</footer>
-
+<footer class="footer"><div class="wrap"><span>© 2026 DueYou. Helpful money admin, no data harvest.</span><span>Last updated: 24 June 2026</span></div></footer>
 </body>
 </html>
