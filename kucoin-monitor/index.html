@@ -1,58 +1,44 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#07111f">
-  <title>KuCoin Futures Monitor</title>
-  <style>
-    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#07111f;color:#eaf4ff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{display:grid;place-items:center;padding:24px}.card{width:min(560px,100%);padding:24px;border:1px solid #243447;border-radius:24px;background:linear-gradient(145deg,#111d2f,#08121f);box-shadow:0 20px 60px rgba(0,0,0,.35)}.eyebrow{margin:0 0 8px;color:#61d5ff;font-weight:800;letter-spacing:.12em;font-size:.72rem}.card h1{margin:0 0 10px;font-size:1.7rem}.card p{color:#a9bbcf;line-height:1.55}.status{margin:18px 0;padding:12px 14px;border:1px solid #243447;border-radius:14px;background:#07111f;color:#cbd9e8;font-size:.88rem;line-height:1.5}.status.good{border-color:rgba(92,231,177,.45);color:#9ff3cf}.status.bad{border-color:rgba(255,128,149,.45);color:#ffb0bd}.actions{display:flex;gap:10px;flex-wrap:wrap}button{flex:1;min-width:150px;border:1px solid #2d4660;border-radius:12px;background:#0b1b2e;color:#eef7ff;padding:12px 14px;font-weight:800;font-size:.95rem}button.primary{background:#123757;border-color:#2b78a9}.fine{font-size:.74rem;color:#7990a8;margin-top:15px}@media(max-width:520px){body{padding:14px}.card{padding:18px}.actions{display:grid}.actions button{width:100%}}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07111f">
+<title>KuCoin Futures Monitor</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#07111f;color:#eaf4ff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{display:grid;place-items:center;padding:24px}.card{width:min(560px,100%);padding:24px;border:1px solid #243447;border-radius:24px;background:linear-gradient(145deg,#111d2f,#08121f);box-shadow:0 20px 60px rgba(0,0,0,.35)}.eyebrow{margin:0 0 8px;color:#61d5ff;font-weight:800;letter-spacing:.12em;font-size:.72rem}h1{margin:0 0 10px;font-size:1.7rem}p{color:#a9bbcf;line-height:1.55}.status{margin:18px 0;padding:12px 14px;border:1px solid #243447;border-radius:14px;background:#07111f;color:#cbd9e8;font-size:.88rem;line-height:1.5}.good{border-color:rgba(92,231,177,.45);color:#9ff3cf}.bad{border-color:rgba(255,128,149,.45);color:#ffb0bd}.actions{display:flex;gap:10px;flex-wrap:wrap}button{flex:1;min-width:150px;border:1px solid #2d4660;border-radius:12px;background:#0b1b2e;color:#eef7ff;padding:12px 14px;font-weight:800;font-size:.95rem}.primary{background:#123757;border-color:#2b78a9}.fine{font-size:.74rem;color:#7990a8;margin-top:15px}@media(max-width:520px){body{padding:14px}.card{padding:18px}.actions{display:grid}.actions button{width:100%}}
+</style>
 </head>
 <body>
-  <main class="card">
-    <p class="eyebrow">PRIVATE KUCOIN FUTURES</p>
-    <h1>Market Intelligence</h1>
-    <p>This public launcher contains no market data and no GitHub credential. It loads the current private dashboard directly from your repository after local authentication.</p>
-    <div id="status" class="status">Checking this browser for your saved read-only GitHub credential…</div>
-    <div class="actions">
-      <button id="connect" class="primary" type="button">Connect GitHub</button>
-      <button id="reload" type="button">Reload dashboard</button>
-    </div>
-    <p class="fine">Required token scope: dueyouapp/kucoin-futures-monitor only, Contents: Read-only. The token is saved only in this browser profile.</p>
-  </main>
+<main class="card">
+<p class="eyebrow">PRIVATE KUCOIN FUTURES</p>
+<h1>Market Intelligence</h1>
+<p><b>Permanent launcher.</b> This public access shell contains no market data and no GitHub credential. It loads the newest complete private dashboard directly from your repository after local authentication.</p>
+<div id="status" class="status">Checking this browser for your saved read-only GitHub credential…</div>
+<div class="actions"><button id="connect" class="primary" type="button">Connect GitHub</button><button id="reload" type="button">Reload dashboard</button></div>
+<p class="fine">Required token scope: dueyouapp/kucoin-futures-monitor only, Contents: Read-only. The token is saved only in this browser profile.</p>
+</main>
 <script>
-(() => {
-  'use strict';
-  const REPOSITORY='dueyouapp/kucoin-futures-monitor';
-  const BRANCH='main';
-  const DASHBOARD_PATH='dashboard/live.html';
-  const TOKEN_KEY='kucoin-monitor-github-read-token-v1';
-  const VAULT_DB='kucoin-monitor-device-vault-v1';
-  const VAULT_STORE='credentials';
-  const VAULT_TOKEN_ID='github-read-token';
-  const status=document.getElementById('status');
-  const connect=document.getElementById('connect');
-  const reload=document.getElementById('reload');
-  let inFlight=false;
-
-  function setStatus(text,kind='') { status.textContent=text; status.className='status'+(kind?' '+kind:''); }
-  function localGet(){try{return localStorage.getItem(TOKEN_KEY)}catch(_){return null}}
-  function localSet(value){try{localStorage.setItem(TOKEN_KEY,value);return true}catch(_){return false}}
-  function localRemove(){try{localStorage.removeItem(TOKEN_KEY)}catch(_){}}
-  function openVault(){return new Promise((resolve,reject)=>{if(!('indexedDB'in window)){reject(new Error('IndexedDB unavailable'));return}const req=indexedDB.open(VAULT_DB,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(VAULT_STORE))db.createObjectStore(VAULT_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error('Credential vault unavailable'))})}
-  async function vaultRead(){let db;try{db=await openVault();return await new Promise((resolve,reject)=>{const tx=db.transaction(VAULT_STORE,'readonly');const req=tx.objectStore(VAULT_STORE).get(VAULT_TOKEN_ID);req.onsuccess=()=>resolve(typeof req.result==='string'?req.result:null);req.onerror=()=>reject(req.error)})}catch(_){return null}finally{try{db?.close()}catch(_){}}}
-  async function vaultWrite(token){let db;try{db=await openVault();await new Promise((resolve,reject)=>{const tx=db.transaction(VAULT_STORE,'readwrite');tx.objectStore(VAULT_STORE).put(token,VAULT_TOKEN_ID);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});return true}catch(_){return false}finally{try{db?.close()}catch(_){}}}
-  async function savedToken(){const local=localGet();if(local){vaultWrite(local);return local}const mirrored=await vaultRead();if(mirrored){localSet(mirrored);return mirrored}return null}
-  async function saveToken(token){const clean=String(token||'').trim();if(!clean)throw new Error('Token is empty.');const a=localSet(clean),b=await vaultWrite(clean);if(!a&&!b)throw new Error('This browser refused to persist the token.');try{await navigator.storage?.persist?.()}catch(_){}return clean}
-  async function clearToken(){localRemove();let db;try{db=await openVault();await new Promise((resolve,reject)=>{const tx=db.transaction(VAULT_STORE,'readwrite');tx.objectStore(VAULT_STORE).delete(VAULT_TOKEN_ID);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}catch(_){}finally{try{db?.close()}catch(_){}}}
-  async function fetchDashboard(token){const url=`https://api.github.com/repos/${REPOSITORY}/contents/${DASHBOARD_PATH}?ref=${encodeURIComponent(BRANCH)}&ts=${Date.now()}`;const response=await fetch(url,{cache:'no-store',headers:{Accept:'application/vnd.github.raw+json',Authorization:`Bearer ${token}`,'X-GitHub-Api-Version':'2022-11-28'}});if(!response.ok)throw new Error(response.status===401||response.status===403||response.status===404?'Private dashboard access failed. Check the saved token and repository permission.':`GitHub returned HTTP ${response.status}.`);const html=await response.text();if(!html.includes('window.MONITOR_SNAPSHOT')||!html.includes('Market Intelligence'))throw new Error('The private dashboard response was not valid HTML.');return html}
-  async function loadDashboard(tokenOverride=null){if(inFlight)return;inFlight=true;connect.disabled=reload.disabled=true;try{const token=tokenOverride||await savedToken();if(!token){setStatus('No saved credential found on this browser. Connect GitHub once to open the private dashboard.');return}setStatus('Loading the newest private dashboard from GitHub…');const html=await fetchDashboard(token);setStatus('Loaded. Opening current dashboard…','good');document.open();document.write(html);document.close()}catch(error){setStatus(error?.message||'Unable to load the private dashboard.','bad')}finally{inFlight=false;connect.disabled=reload.disabled=false}}
-  async function connectNow(){const existing=await savedToken();if(existing){await loadDashboard(existing);return}const token=prompt('Paste the fine-grained GitHub token for dueyouapp/kucoin-futures-monitor with Contents: Read-only permission. It will be saved only in this browser profile.');if(!token)return;try{setStatus('Verifying private repository access…');await fetchDashboard(token.trim());const clean=await saveToken(token);await loadDashboard(clean)}catch(error){await clearToken();setStatus(error?.message||'GitHub connection failed.','bad')}}
-  connect.addEventListener('click',connectNow);
-  reload.addEventListener('click',()=>loadDashboard());
-  savedToken().then(token=>{connect.textContent=token?'Open dashboard':'Connect GitHub';if(token)loadDashboard(token);else setStatus('No saved credential found on this browser. Connect GitHub once to open the private dashboard.')});
+(()=>{'use strict';
+const REPOSITORY='dueyouapp/kucoin-futures-monitor',BRANCH='main',DASHBOARD_PATH='dashboard/live.html';
+const TOKEN_KEY='kucoin-monitor-github-read-token-v1',VAULT_DB='kucoin-monitor-device-vault-v1',VAULT_STORE='credentials',VAULT_TOKEN_ID='github-read-token';
+const status=document.getElementById('status'),connect=document.getElementById('connect'),reload=document.getElementById('reload');let inFlight=false;
+const setStatus=(text,kind='')=>{status.textContent=text;status.className='status'+(kind?' '+kind:'')};
+const localGet=()=>{try{return localStorage.getItem(TOKEN_KEY)}catch(_){return null}};
+const localSet=value=>{try{localStorage.setItem(TOKEN_KEY,value);return true}catch(_){return false}};
+const localRemove=()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(_){}};
+function openVault(){return new Promise((resolve,reject)=>{if(!('indexedDB'in window))return reject(new Error('IndexedDB unavailable'));const req=indexedDB.open(VAULT_DB,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(VAULT_STORE))db.createObjectStore(VAULT_STORE)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error('Credential vault unavailable'))})}
+async function vaultRead(){let db;try{db=await openVault();return await new Promise((resolve,reject)=>{const req=db.transaction(VAULT_STORE,'readonly').objectStore(VAULT_STORE).get(VAULT_TOKEN_ID);req.onsuccess=()=>resolve(typeof req.result==='string'?req.result:null);req.onerror=()=>reject(req.error)})}catch(_){return null}finally{try{db?.close()}catch(_){}}}
+async function vaultWrite(token){let db;try{db=await openVault();await new Promise((resolve,reject)=>{const tx=db.transaction(VAULT_STORE,'readwrite');tx.objectStore(VAULT_STORE).put(token,VAULT_TOKEN_ID);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});return true}catch(_){return false}finally{try{db?.close()}catch(_){}}}
+async function vaultClear(){let db;try{db=await openVault();await new Promise((resolve,reject)=>{const tx=db.transaction(VAULT_STORE,'readwrite');tx.objectStore(VAULT_STORE).delete(VAULT_TOKEN_ID);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}catch(_){}finally{try{db?.close()}catch(_){}}}
+async function savedToken(){const local=localGet();if(local){vaultWrite(local);return local}const mirrored=await vaultRead();if(mirrored){localSet(mirrored);return mirrored}return null}
+async function saveToken(token){const clean=String(token||'').trim();if(!clean)throw new Error('Token is empty.');const local=localSet(clean),vault=await vaultWrite(clean);if(!local&&!vault)throw new Error('This browser refused to persist the token.');try{await navigator.storage?.persist?.()}catch(_){}return clean}
+async function clearToken(){localRemove();await vaultClear()}
+async function fetchDashboard(token){const url=`https://api.github.com/repos/${REPOSITORY}/contents/${DASHBOARD_PATH}?ref=${encodeURIComponent(BRANCH)}&ts=${Date.now()}`;const response=await fetch(url,{cache:'no-store',headers:{Accept:'application/vnd.github.raw+json',Authorization:`Bearer ${token}`,'X-GitHub-Api-Version':'2022-11-28'}});if(!response.ok)throw new Error(response.status===401||response.status===403||response.status===404?'Private dashboard access failed. Check the saved token and repository permission.':`GitHub returned HTTP ${response.status}.`);const html=await response.text();if(!html.includes('window.MONITOR_SNAPSHOT')||!html.includes('Market Intelligence'))throw new Error('The private dashboard response was not valid HTML.');return html}
+async function loadDashboard(tokenOverride=null){if(inFlight)return;inFlight=true;connect.disabled=reload.disabled=true;try{const token=tokenOverride||await savedToken();if(!token){setStatus('No saved credential found on this browser. Connect GitHub once to open the private dashboard.');return}setStatus('Loading the newest private dashboard from GitHub…');const html=await fetchDashboard(token);setStatus('Loaded. Opening current dashboard…','good');document.open();document.write(html);document.close()}catch(error){setStatus(error?.message||'Unable to load the private dashboard.','bad')}finally{inFlight=false;connect.disabled=reload.disabled=false}}
+async function connectNow(){const existing=await savedToken();if(existing)return loadDashboard(existing);const token=prompt('Paste the fine-grained GitHub token for dueyouapp/kucoin-futures-monitor with Contents: Read-only permission. It will be saved only in this browser profile.');if(!token)return;try{setStatus('Verifying private repository access…');await fetchDashboard(token.trim());await loadDashboard(await saveToken(token))}catch(error){await clearToken();setStatus(error?.message||'GitHub connection failed.','bad')}}
+connect.addEventListener('click',connectNow);reload.addEventListener('click',()=>loadDashboard());savedToken().then(token=>{connect.textContent=token?'Open dashboard':'Connect GitHub';if(token)loadDashboard(token);else setStatus('No saved credential found on this browser. Connect GitHub once to open the private dashboard.')});
 })();
 </script>
 </body>
