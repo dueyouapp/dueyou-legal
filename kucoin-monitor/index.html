@@ -25,6 +25,7 @@
 </main>
 <script>
 (()=>{'use strict';
+if(location.hash==='#trades')history.replaceState(null,'','#terminal');
 const REPOSITORY='dueyouapp/kucoin-futures-monitor',BRANCH='main',DASHBOARD_PATH='dashboard/live.html';
 const TOKEN_KEY='kucoin-monitor-github-read-token-v1',VAULT_DB='kucoin-monitor-device-vault-v1',VAULT_STORE='credentials',VAULT_TOKEN_ID='github-read-token';
 const status=document.getElementById('status'),openButton=document.getElementById('open'),connect=document.getElementById('connect');let inFlight=false;
