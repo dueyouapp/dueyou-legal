@@ -183,7 +183,7 @@ def validate_sitemap(errors: list[str]) -> None:
         fail(errors, f"sitemap.xml: invalid XML: {exc}")
         return
 
-    ns = {"sm": "http://www.sitemaps.org/sitemap/0.9"}
+    ns = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
     locs = {node.text for node in tree.findall("sm:url/sm:loc", ns) if node.text}
     expected = {
         EXPECTED_BASE,
