@@ -3,6 +3,8 @@ from __future__ import annotations
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
+import shutil
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
@@ -15,6 +17,7 @@ PUBLIC_PAGES = [
     "data-safety.html",
 ]
 ALL_HTML = PUBLIC_PAGES + ["404.html"]
+KUCOIN_LAUNCHER = ROOT / "kucoin-monitor" / "index.html"
 EXPECTED_BASE = "https://dueyouapp.github.io/dueyou-legal/"
 
 
@@ -112,6 +115,66 @@ def validate_html(errors: list[str]) -> None:
                 fail(errors, f"{name}: broken internal link: {href}")
 
 
+def validate_kucoin_launcher(errors: list[str]) -> None:
+    if not KUCOIN_LAUNCHER.exists():
+        fail(errors, "kucoin-monitor/index.html: missing private launcher")
+        return
+
+    text = KUCOIN_LAUNCHER.read_text(encoding="utf-8")
+    lower = text.lower()
+
+    required = (
+        "LAUNCHER V4.4",
+        "kucoin-monitor-github-read-token-v1",
+        "applyKnownV4Compatibility",
+        "validateDashboard",
+        "v4LauncherHandshake",
+        "Contents: Read-only",
+    )
+    for marker in required:
+        if marker not in text:
+            fail(errors, f"kucoin-monitor/index.html: missing launcher contract marker {marker!r}")
+
+    # HTML script parsing terminates on a literal closing-script sentinel even
+    # when that text appears inside a JavaScript string. The launcher therefore
+    # must contain exactly one real closing tag: the tag that closes its own
+    # inline JavaScript block. Runtime-injected tags are assembled from pieces.
+    closing_count = lower.count("</script>")
+    if closing_count != 1:
+        fail(
+            errors,
+            "kucoin-monitor/index.html: expected exactly one literal </script> "
+            f"sentinel, found {closing_count}",
+        )
+
+    script_open = lower.find("<script>")
+    script_close = lower.rfind("</script>")
+    if script_open < 0 or script_close <= script_open:
+        fail(errors, "kucoin-monitor/index.html: inline launcher script boundary is invalid")
+        return
+
+    javascript = text[script_open + len("<script>") : script_close]
+    if not javascript.strip():
+        fail(errors, "kucoin-monitor/index.html: inline launcher JavaScript is empty")
+        return
+
+    node = shutil.which("node")
+    if not node:
+        fail(errors, "kucoin-monitor/index.html: Node.js is required for launcher syntax validation")
+        return
+
+    completed = subprocess.run(
+        [node, "--check", "-"],
+        input=javascript,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout).strip()
+        fail(errors, f"kucoin-monitor/index.html: launcher JavaScript syntax error: {detail}")
+
+
 def validate_sitemap(errors: list[str]) -> None:
     path = ROOT / "sitemap.xml"
     try:
@@ -144,6 +207,7 @@ def validate_robots(errors: list[str]) -> None:
 def main() -> int:
     errors: list[str] = []
     validate_html(errors)
+    validate_kucoin_launcher(errors)
     validate_sitemap(errors)
     validate_robots(errors)
 
@@ -153,7 +217,10 @@ def main() -> int:
             print(f"- {item}")
         return 1
 
-    print(f"Site validation passed for {len(ALL_HTML)} HTML pages.")
+    print(
+        f"Site validation passed for {len(ALL_HTML)} legal pages "
+        "and the KuCoin private launcher."
+    )
     return 0
 
 

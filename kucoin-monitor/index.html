@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- KuCoin Futures private launcher · V4.3 runtime compatibility bridge -->
+<!-- KuCoin Futures private launcher · V4.4 parser-safe compatibility bridge -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -13,52 +13,228 @@
 </head>
 <body>
 <main class="card">
-<p class="eyebrow">PRIVATE KUCOIN FUTURES · LAUNCHER V4.3</p>
+<p class="eyebrow">PRIVATE KUCOIN FUTURES · LAUNCHER V4.4</p>
 <h1>Control Room</h1>
-<p>Loads the newest private dashboard from the monitor repository and repairs the known pre-fix V4 browser runtime defect before execution when necessary.</p>
-<div id="status" class="status">Checking this browser for your saved read-only GitHub credential…</div>
+<p>Loads and verifies the newest private Control Room from the monitor repository. Older pre-fix V4 builds are repaired before their JavaScript is executed.</p>
+<div id="status" class="status">Starting launcher…</div>
 <div class="actions">
 <button id="open" class="primary" type="button">Open Control Room</button>
 <button id="connect" type="button">Connect / replace GitHub token</button>
 </div>
-<p class="fine">Required token scope: dueyouapp/kucoin-futures-monitor only, Contents: Read-only. The token remains in this browser profile. No KuCoin private credential is stored here.</p>
+<p class="fine">Required token scope: dueyouapp/kucoin-futures-monitor only, Contents: Read-only. No KuCoin private credential is stored here.</p>
 </main>
 <script>
 (()=>{'use strict';
-const REPO='dueyouapp/kucoin-futures-monitor',BRANCH='main',PATH='dashboard/live.html';
+const REPO='dueyouapp/kucoin-futures-monitor';
+const BRANCH='main';
+const DASHBOARD_PATH='dashboard/live.html';
 const TOKEN_KEY='kucoin-monitor-github-read-token-v1';
 const REQUIRED=['CONTROL ROOM V4','PROJECTED CANDLES','CHART KEY / ABBREVIATIONS','window.MONITOR_SNAPSHOT'];
-const status=document.getElementById('status'),openButton=document.getElementById('open'),connectButton=document.getElementById('connect');
+const status=document.getElementById('status');
+const openButton=document.getElementById('open');
+const connectButton=document.getElementById('connect');
 let busy=false;
-const setStatus=(message,tone='')=>{status.textContent=message;status.className='status'+(tone?' '+tone:'')};
+
+const setStatus=(message,tone='')=>{
+  status.textContent=message;
+  status.className='status'+(tone?' '+tone:'');
+};
 const getToken=()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(_){return ''}};
 const saveToken=token=>{try{localStorage.setItem(TOKEN_KEY,token);return true}catch(_){return false}};
 const clearToken=()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(_){}};
-const apiUrl=()=>`https://api.github.com/repos/${REPO}/contents/${PATH}?ref=${encodeURIComponent(BRANCH)}&ts=${Date.now()}`;
-function decodeBase64Utf8(value){const binary=atob(String(value||'').replace(/\s+/g,''));const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return new TextDecoder('utf-8').decode(bytes)}
-function validate(html){const text=String(html||''),missing=[];if(!/<!doctype\s+html|<html[\s>]/i.test(text))missing.push('HTML shell');for(const marker of REQUIRED)if(!text.includes(marker))missing.push(marker);if(missing.length)throw new Error(`Refusing stale/incomplete dashboard. Missing: ${missing.join(', ')}.`);return text}
+const apiUrl=()=>`https://api.github.com/repos/${REPO}/contents/${DASHBOARD_PATH}?ref=${encodeURIComponent(BRANCH)}&ts=${Date.now()}`;
+
+function decodeBase64Utf8(value){
+  const binary=atob(String(value||'').replace(/\s+/g,''));
+  const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+function validateDashboard(html){
+  const text=String(html||'');
+  const missing=[];
+  if(!/<!doctype\s+html|<html[\s>]/i.test(text))missing.push('HTML shell');
+  for(const marker of REQUIRED)if(!text.includes(marker))missing.push(marker);
+  if(missing.length)throw new Error(`Refusing stale/incomplete dashboard. Missing: ${missing.join(', ')}.`);
+  return text;
+}
+
 function applyKnownV4Compatibility(html){
-  let text=String(html||''),patches=[];
-  const start=text.indexOf('  function installMarkerAbbreviations(){');
-  const end=start>=0?text.indexOf('\n  function setupTargets(',start):-1;
-  if(start>=0&&end>start){const segment=text.slice(start,end);if(segment.includes('lib.createSeriesMarkers=function')){const safe="  function installMarkerAbbreviations(){\n    // V4.3 compatibility: TradingView standalone exports are frozen.\n    // Marker compaction happens at our marker boundary, never by mutating the vendor API.\n    V4.markerWrapped=true;\n  }\n";text=text.slice(0,start)+safe+text.slice(end);patches.push('frozen-export');}}
-  const oldMarkers="      const all=[...markers,...evidence,...pattern].sort((a,b)=>Number(a.time)-Number(b.time)).slice(-16);\n      if(all.length&&typeof lib.createSeriesMarkers==='function')lib.createSeriesMarkers(candles,all,{autoScale:false});";
-  const compactMarkers="      const all=[...markers,...evidence,...pattern].sort((a,b)=>Number(a.time)-Number(b.time)).slice(-16);\n      const compact=all.map(marker=>{const raw=String(marker.text||'').trim(),u=raw.toUpperCase();let t=raw;if(u.includes('CONFIRMED HIGH'))t='CH';else if(u.includes('CONFIRMED LOW'))t='CL';else if(u==='ZONE'||u.includes('ZONE TOUCH'))t='Z';else if(u.includes('IFVG')&&u.includes('HOLD'))t='IH';else if(u.includes('IFVG'))t='IF';else if(u.startsWith('BOS'))t='BOS';else if(u.startsWith('MSS'))t='MSS';else if(u==='HOLD')t='H';else if(raw.length>6)t=raw.slice(0,6);return {...marker,text:t,size:Math.min(Number(marker.size||.6),.48)};});\n      if(compact.length&&typeof lib.createSeriesMarkers==='function')lib.createSeriesMarkers(candles,compact,{autoScale:false});";
-  if(text.includes(oldMarkers)){text=text.replace(oldMarkers,compactMarkers);patches.push('compact-markers');}
+  let text=String(html||'');
+  const patches=[];
+
+  const installStart=text.indexOf('  function installMarkerAbbreviations(){');
+  const installEnd=installStart>=0?text.indexOf('\n  function setupTargets(',installStart):-1;
+  if(installStart>=0&&installEnd>installStart){
+    const segment=text.slice(installStart,installEnd);
+    if(segment.includes('lib.createSeriesMarkers=function')){
+      const safe=[
+        '  function installMarkerAbbreviations(){',
+        '    // Launcher compatibility for pre-fix V4 only.',
+        '    // TradingView standalone exports are frozen, so never monkey-patch them.',
+        '    V4.markerWrapped=true;',
+        '  }',
+        ''
+      ].join('\n');
+      text=text.slice(0,installStart)+safe+text.slice(installEnd);
+      patches.push('frozen-export');
+    }
+  }
+
+  const oldMarkers=[
+    '      const all=[...markers,...evidence,...pattern].sort((a,b)=>Number(a.time)-Number(b.time)).slice(-16);',
+    "      if(all.length&&typeof lib.createSeriesMarkers==='function')lib.createSeriesMarkers(candles,all,{autoScale:false});"
+  ].join('\n');
+  const compactMarkers=[
+    '      const all=[...markers,...evidence,...pattern].sort((a,b)=>Number(a.time)-Number(b.time)).slice(-16);',
+    "      const compact=all.map(marker=>{const raw=String(marker.text||'').trim(),u=raw.toUpperCase();let t=raw;if(u.includes('CONFIRMED HIGH'))t='CH';else if(u.includes('CONFIRMED LOW'))t='CL';else if(u==='ZONE'||u.includes('ZONE TOUCH'))t='Z';else if(u.includes('IFVG')&&u.includes('HOLD'))t='IH';else if(u.includes('IFVG'))t='IF';else if(u.startsWith('BOS'))t='BOS';else if(u.startsWith('MSS'))t='MSS';else if(u==='HOLD')t='H';else if(raw.length>6)t=raw.slice(0,6);return {...marker,text:t,size:Math.min(Number(marker.size||.6),.48)};});",
+    "      if(compact.length&&typeof lib.createSeriesMarkers==='function')lib.createSeriesMarkers(candles,compact,{autoScale:false});"
+  ].join('\n');
+  if(text.includes(oldMarkers)){
+    text=text.replace(oldMarkers,compactMarkers);
+    patches.push('compact-markers');
+  }
+
   const boundary='\n/* CONTROL ROOM V4\n * A full presentation redesign';
-  const separated='</script>\n  <script>\n/* CONTROL ROOM V4\n * A full presentation redesign';
-  if(text.includes(boundary)&&!text.includes(separated)){text=text.replace(boundary,'\n</script>\n  <script>\n/* CONTROL ROOM V4\n * A full presentation redesign',1);patches.push('script-isolation');}
+  const closeScript='<'+'/script>';
+  const openScript='<script>';
+  const separated=closeScript+'\n  '+openScript+'\n/* CONTROL ROOM V4\n * A full presentation redesign';
+  if(text.includes(boundary)&&!text.includes(separated)){
+    text=text.replace(boundary,'\n'+separated,1);
+    patches.push('script-isolation');
+  }
+
   window.MONITOR_LAUNCHER_COMPAT_PATCHES=patches;
   return text;
 }
-function authError(response){const error=new Error('Private dashboard access failed. Use Connect / replace GitHub token below.');error.authFailure=true;return error}
-async function rawFetch(token){const r=await fetch(apiUrl(),{cache:'no-store',credentials:'omit',headers:{Accept:'application/vnd.github.raw+json',Authorization:`Bearer ${token}`}});if(!r.ok){if([401,403,404].includes(r.status))throw authError(r);throw new Error(`GitHub returned HTTP ${r.status}.`)}return validate(await r.text())}
-async function jsonFetch(token){const r=await fetch(apiUrl(),{cache:'no-store',credentials:'omit',headers:{Authorization:`Bearer ${token}`}});if(!r.ok){if([401,403,404].includes(r.status))throw authError(r);throw new Error(`GitHub returned HTTP ${r.status}.`)}const payload=await r.json();if(!payload||typeof payload.content!=='string')throw new Error('GitHub returned an unexpected dashboard payload.');return validate(decodeBase64Utf8(payload.content))}
-async function fetchDashboard(token){let first;try{return await rawFetch(token)}catch(error){first=error;if(error?.authFailure)throw error}setStatus('Primary GitHub fetch blocked. Retrying through Contents API…','warn');try{return await jsonFetch(token)}catch(error){if(error?.authFailure)throw error;throw new Error(`GitHub fetch failed on both paths. ${error?.message||first?.message||'Network failure.'}`)}}
-function injectHandshake(html){const script=`<script id="v4LauncherHandshake">(()=>{'use strict';let lastError='';const remember=e=>{lastError=String(e?.message||e?.reason?.message||e?.reason||'runtime error').slice(0,90)};window.addEventListener('error',remember,true);window.addEventListener('unhandledrejection',remember,true);const route=()=>{if(location.hash!=='#terminal')history.replaceState(null,'','#terminal')};const badge=(ok)=>{let el=document.getElementById('v4RuntimeBadge');if(!el){el=document.createElement('div');el.id='v4RuntimeBadge';el.style.cssText='position:fixed;right:8px;top:8px;z-index:2147483647;padding:5px 8px;border-radius:999px;font:800 10px/1.2 system-ui,sans-serif;letter-spacing:.04em;max-width:70vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.28);pointer-events:none';document.body.appendChild(el)}el.textContent=ok?'V4 LIVE':('V4 ERROR'+(lastError?': '+lastError:''));el.style.color=ok?'#9ff3cf':'#ffb0bd';el.style.background=ok?'rgba(6,35,27,.94)':'rgba(43,10,18,.96)';el.style.border='1px solid '+(ok?'rgba(92,231,177,.5)':'rgba(255,128,149,.55)')};const verify=()=>{route();const terminal=document.querySelector('#app .terminal');if(terminal&&!terminal.classList.contains('cr-v4')){try{window.monitorRenderControlRoom?.();window.dispatchEvent(new Event('hashchange'));window.monitorApplyProjectedScenarioCandles?.()}catch(error){remember(error)}}const live=!!document.querySelector('#app .terminal.cr-v4');badge(live);document.documentElement.dataset.controlRoomV4Runtime=live?'live':'error';return live};route();document.addEventListener('DOMContentLoaded',()=>{setTimeout(verify,200);setTimeout(verify,800);setTimeout(verify,1800)},{once:true})})();<\/script>`;return String(html).replace(/<\/body>/i,script+'</body>')}
-async function load(tokenOverride=''){if(busy)return;busy=true;openButton.disabled=connectButton.disabled=true;try{const token=String(tokenOverride||getToken()).trim();if(!token){setStatus('No saved credential on this browser. Use Connect / replace GitHub token once.');return}setStatus('Loading and validating Control Room V4…');let html=await fetchDashboard(token);html=applyKnownV4Compatibility(html);setStatus(window.MONITOR_LAUNCHER_COMPAT_PATCHES?.length?`V4 compatibility applied: ${window.MONITOR_LAUNCHER_COMPAT_PATCHES.join(', ')}. Opening…`:'Current V4 build verified. Opening…','good');history.replaceState(null,'','#terminal');document.open();document.write(injectHandshake(html));document.close()}catch(error){if(error?.authFailure)clearToken();setStatus(error?.message||'Unable to load the private Control Room.','bad')}finally{busy=false;openButton.disabled=connectButton.disabled=false}}
-async function connect(){const token=prompt('Paste the fine-grained GitHub token for dueyouapp/kucoin-futures-monitor with Contents: Read-only permission.');if(!token)return;const clean=token.trim();try{setStatus('Verifying private repository access…');await fetchDashboard(clean);if(!saveToken(clean))throw new Error('This browser refused to save the token.');await load(clean)}catch(error){if(error?.authFailure)clearToken();setStatus(error?.message||'GitHub connection failed.','bad')}}
-openButton.addEventListener('click',()=>load());connectButton.addEventListener('click',connect);if(getToken())load();else setStatus('No saved credential on this browser. Use Connect / replace GitHub token once.');
+
+function authError(){
+  const error=new Error('Private dashboard access failed. Use Connect / replace GitHub token below.');
+  error.authFailure=true;
+  return error;
+}
+
+async function rawFetch(token){
+  const response=await fetch(apiUrl(),{
+    cache:'no-store',
+    credentials:'omit',
+    headers:{
+      Accept:'application/vnd.github.raw',
+      Authorization:`Bearer ${token}`,
+      'X-GitHub-Api-Version':'2022-11-28'
+    }
+  });
+  if(!response.ok){
+    if([401,403,404].includes(response.status))throw authError();
+    throw new Error(`GitHub returned HTTP ${response.status}.`);
+  }
+  return validateDashboard(await response.text());
+}
+
+async function jsonFetch(token){
+  const response=await fetch(apiUrl(),{
+    cache:'no-store',
+    credentials:'omit',
+    headers:{
+      Accept:'application/vnd.github+json',
+      Authorization:`Bearer ${token}`,
+      'X-GitHub-Api-Version':'2022-11-28'
+    }
+  });
+  if(!response.ok){
+    if([401,403,404].includes(response.status))throw authError();
+    throw new Error(`GitHub returned HTTP ${response.status}.`);
+  }
+  const payload=await response.json();
+  if(!payload||typeof payload.content!=='string')throw new Error('GitHub returned an unexpected dashboard payload.');
+  return validateDashboard(decodeBase64Utf8(payload.content));
+}
+
+async function fetchDashboard(token){
+  let firstError;
+  try{
+    return await rawFetch(token);
+  }catch(error){
+    firstError=error;
+    if(error?.authFailure)throw error;
+  }
+  setStatus('Primary GitHub fetch blocked. Retrying through Contents API…','warn');
+  try{
+    return await jsonFetch(token);
+  }catch(error){
+    if(error?.authFailure)throw error;
+    throw new Error(`GitHub fetch failed on both paths. ${error?.message||firstError?.message||'Network failure.'}`);
+  }
+}
+
+function injectHandshake(html){
+  const closeScript='<'+'/script>';
+  const body=[
+    "(()=>{'use strict';",
+    "let lastError='';",
+    "const remember=e=>{lastError=String(e?.message||e?.reason?.message||e?.reason||'runtime error').slice(0,110)};",
+    "window.addEventListener('error',remember,true);",
+    "window.addEventListener('unhandledrejection',remember,true);",
+    "const route=()=>{if(location.hash!=='#terminal')history.replaceState(null,'','#terminal')};",
+    "const badge=ok=>{let el=document.getElementById('v4RuntimeBadge');if(!el){el=document.createElement('div');el.id='v4RuntimeBadge';el.style.cssText='position:fixed;right:8px;top:8px;z-index:2147483647;padding:5px 8px;border-radius:999px;font:800 10px/1.2 system-ui,sans-serif;letter-spacing:.04em;max-width:72vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.28);pointer-events:none';document.body.appendChild(el)}el.textContent=ok?'V4 LIVE':('V4 ERROR'+(lastError?': '+lastError:''));el.style.color=ok?'#9ff3cf':'#ffb0bd';el.style.background=ok?'rgba(6,35,27,.94)':'rgba(43,10,18,.96)';el.style.border='1px solid '+(ok?'rgba(92,231,177,.5)':'rgba(255,128,149,.55)')};",
+    "const verify=()=>{route();const terminal=document.querySelector('#app .terminal');if(terminal&&!terminal.classList.contains('cr-v4')){try{window.monitorRenderControlRoom?.();window.dispatchEvent(new Event('hashchange'));window.monitorApplyProjectedScenarioCandles?.()}catch(error){remember(error)}}const live=!!document.querySelector('#app .terminal.cr-v4');badge(live);document.documentElement.dataset.controlRoomV4Runtime=live?'live':'error';return live};",
+    "route();",
+    "document.addEventListener('DOMContentLoaded',()=>{setTimeout(verify,200);setTimeout(verify,800);setTimeout(verify,1800)},{once:true});",
+    "})();"
+  ].join('');
+  const script='<script id="v4LauncherHandshake">'+body+closeScript;
+  return String(html).replace(/<\/body>/i,script+'</body>');
+}
+
+async function loadDashboard(tokenOverride=''){
+  if(busy)return;
+  busy=true;
+  openButton.disabled=true;
+  connectButton.disabled=true;
+  try{
+    const token=String(tokenOverride||getToken()).trim();
+    if(!token){
+      setStatus('No saved credential on this browser. Use Connect / replace GitHub token once.');
+      return;
+    }
+    setStatus('Loading and validating Control Room V4…');
+    let html=await fetchDashboard(token);
+    html=applyKnownV4Compatibility(html);
+    const patches=window.MONITOR_LAUNCHER_COMPAT_PATCHES||[];
+    setStatus(patches.length?`Compatibility repair applied: ${patches.join(', ')}. Opening…`:'Current V4 build verified. Opening…','good');
+    history.replaceState(null,'','#terminal');
+    document.open();
+    document.write(injectHandshake(html));
+    document.close();
+  }catch(error){
+    if(error?.authFailure)clearToken();
+    setStatus(error?.message||'Unable to load the private Control Room.','bad');
+  }finally{
+    busy=false;
+    openButton.disabled=false;
+    connectButton.disabled=false;
+  }
+}
+
+async function connect(){
+  const token=prompt('Paste the fine-grained GitHub token for dueyouapp/kucoin-futures-monitor with Contents: Read-only permission.');
+  if(!token)return;
+  const clean=token.trim();
+  try{
+    setStatus('Verifying private repository access…');
+    await fetchDashboard(clean);
+    if(!saveToken(clean))throw new Error('This browser refused to save the token.');
+    await loadDashboard(clean);
+  }catch(error){
+    if(error?.authFailure)clearToken();
+    setStatus(error?.message||'GitHub connection failed.','bad');
+  }
+}
+
+openButton.addEventListener('click',()=>loadDashboard());
+connectButton.addEventListener('click',connect);
+if(getToken())loadDashboard();
+else setStatus('No saved credential on this browser. Use Connect / replace GitHub token once.');
 })();
 </script>
 </body>
