@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- KuCoin Futures private launcher · V4.4 parser-safe compatibility bridge -->
+<!-- KuCoin Futures private launcher · V4.5 verified runtime-release bridge -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -13,9 +13,9 @@
 </head>
 <body>
 <main class="card">
-<p class="eyebrow">PRIVATE KUCOIN FUTURES · LAUNCHER V4.4</p>
+<p class="eyebrow">PRIVATE KUCOIN FUTURES · LAUNCHER V4.5</p>
 <h1>Control Room</h1>
-<p>Loads and verifies the newest private Control Room from the monitor repository. Older pre-fix V4 builds are repaired before their JavaScript is executed.</p>
+<p>Loads the newest private Control Room from the verified runtime-state Release. Its manifest and dashboard SHA-256 are checked before any dashboard JavaScript is executed.</p>
 <div id="status" class="status">Starting launcher…</div>
 <div class="actions">
 <button id="open" class="primary" type="button">Open Control Room</button>
@@ -28,6 +28,10 @@
 const REPO='dueyouapp/kucoin-futures-monitor';
 const BRANCH='main';
 const DASHBOARD_PATH='dashboard/live.html';
+const RELEASE_TAG='runtime-state-v1';
+const DASHBOARD_ASSET='dashboard-live.html';
+const MANIFEST_ASSET='runtime_state_manifest.json';
+const RUNTIME_AUTHORITY='KUCOIN_RUNTIME_STATE_RELEASE_V1';
 const TOKEN_KEY='kucoin-monitor-github-read-token-v1';
 const REQUIRED=['CONTROL ROOM V4','PROJECTED CANDLES','CHART KEY / ABBREVIATIONS','window.MONITOR_SNAPSHOT'];
 const status=document.getElementById('status');
@@ -42,7 +46,8 @@ const setStatus=(message,tone='')=>{
 const getToken=()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(_){return ''}};
 const saveToken=token=>{try{localStorage.setItem(TOKEN_KEY,token);return true}catch(_){return false}};
 const clearToken=()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(_){}};
-const apiUrl=()=>`https://api.github.com/repos/${REPO}/contents/${DASHBOARD_PATH}?ref=${encodeURIComponent(BRANCH)}&ts=${Date.now()}`;
+const legacyApiUrl=()=>`https://api.github.com/repos/${REPO}/contents/${DASHBOARD_PATH}?ref=${encodeURIComponent(BRANCH)}&ts=${Date.now()}`;
+const releaseApiUrl=()=>`https://api.github.com/repos/${REPO}/releases/tags/${encodeURIComponent(RELEASE_TAG)}?ts=${Date.now()}`;
 
 function decodeBase64Utf8(value){
   const binary=atob(String(value||'').replace(/\s+/g,''));
@@ -114,15 +119,86 @@ function authError(){
   return error;
 }
 
-async function rawFetch(token){
-  const response=await fetch(apiUrl(),{
+function githubHeaders(token,accept='application/vnd.github+json'){
+  return {
+    Accept:accept,
+    Authorization:`Bearer ${token}`,
+    'X-GitHub-Api-Version':'2022-11-28'
+  };
+}
+
+async function sha256Hex(text){
+  if(!globalThis.crypto?.subtle)throw new Error('Secure SHA-256 verification is unavailable in this browser.');
+  const bytes=new TextEncoder().encode(String(text));
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return [...new Uint8Array(digest)].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+}
+
+async function fetchReleaseMetadata(token){
+  const response=await fetch(releaseApiUrl(),{
     cache:'no-store',
     credentials:'omit',
-    headers:{
-      Accept:'application/vnd.github.raw',
-      Authorization:`Bearer ${token}`,
-      'X-GitHub-Api-Version':'2022-11-28'
-    }
+    headers:githubHeaders(token)
+  });
+  if(response.status===404)return null;
+  if([401,403].includes(response.status))throw authError();
+  if(!response.ok)throw new Error(`GitHub Release metadata returned HTTP ${response.status}.`);
+  const payload=await response.json();
+  if(!payload||!Array.isArray(payload.assets))throw new Error('GitHub returned malformed runtime Release metadata.');
+  return payload;
+}
+
+function releaseAsset(release,name){
+  return release.assets.find(asset=>asset&&asset.name===name&&typeof asset.url==='string')||null;
+}
+
+async function fetchReleaseAssetText(asset,token){
+  const response=await fetch(asset.url,{
+    cache:'no-store',
+    credentials:'omit',
+    redirect:'follow',
+    headers:githubHeaders(token,'application/octet-stream')
+  });
+  if([401,403].includes(response.status))throw authError();
+  if(!response.ok)throw new Error(`Runtime Release asset ${asset.name} returned HTTP ${response.status}.`);
+  return await response.text();
+}
+
+async function fetchVerifiedReleaseDashboard(token){
+  const release=await fetchReleaseMetadata(token);
+  if(!release)return null;
+
+  const dashboardAsset=releaseAsset(release,DASHBOARD_ASSET);
+  const manifestAsset=releaseAsset(release,MANIFEST_ASSET);
+  if(!dashboardAsset||!manifestAsset){
+    throw new Error('Refusing incomplete runtime Release: dashboard or manifest asset is missing.');
+  }
+
+  const manifestText=await fetchReleaseAssetText(manifestAsset,token);
+  let manifest;
+  try{manifest=JSON.parse(manifestText)}catch(_){throw new Error('Refusing runtime Release: manifest is not valid JSON.');}
+  if(manifest?.authority!==RUNTIME_AUTHORITY||manifest?.trade_authority!==false){
+    throw new Error('Refusing runtime Release: authority policy is invalid.');
+  }
+  const meta=manifest?.dashboard_asset;
+  const expected=String(meta?.sha256||'').toLowerCase();
+  if(meta?.name!==DASHBOARD_ASSET||!/^[0-9a-f]{64}$/.test(expected)){
+    throw new Error('Refusing runtime Release: dashboard checksum metadata is invalid.');
+  }
+
+  const html=await fetchReleaseAssetText(dashboardAsset,token);
+  const observed=await sha256Hex(html);
+  if(observed!==expected){
+    throw new Error(`Refusing runtime Release: dashboard SHA-256 mismatch (${observed.slice(0,12)} != ${expected.slice(0,12)}).`);
+  }
+  return validateDashboard(html);
+}
+
+async function legacyRawFetch(token){
+  const response=await fetch(legacyApiUrl(),{
+    cache:'no-store',
+    credentials:'omit',
+    headers:githubHeaders(token,'application/vnd.github.raw')
   });
   if(!response.ok){
     if([401,403,404].includes(response.status))throw authError();
@@ -131,15 +207,11 @@ async function rawFetch(token){
   return validateDashboard(await response.text());
 }
 
-async function jsonFetch(token){
-  const response=await fetch(apiUrl(),{
+async function legacyJsonFetch(token){
+  const response=await fetch(legacyApiUrl(),{
     cache:'no-store',
     credentials:'omit',
-    headers:{
-      Accept:'application/vnd.github+json',
-      Authorization:`Bearer ${token}`,
-      'X-GitHub-Api-Version':'2022-11-28'
-    }
+    headers:githubHeaders(token)
   });
   if(!response.ok){
     if([401,403,404].includes(response.status))throw authError();
@@ -150,21 +222,31 @@ async function jsonFetch(token){
   return validateDashboard(decodeBase64Utf8(payload.content));
 }
 
-async function fetchDashboard(token){
+async function fetchLegacyDashboard(token){
   let firstError;
   try{
-    return await rawFetch(token);
+    return await legacyRawFetch(token);
   }catch(error){
     firstError=error;
     if(error?.authFailure)throw error;
   }
-  setStatus('Primary GitHub fetch blocked. Retrying through Contents API…','warn');
+  setStatus('Git seed raw fetch blocked. Retrying through Contents API…','warn');
   try{
-    return await jsonFetch(token);
+    return await legacyJsonFetch(token);
   }catch(error){
     if(error?.authFailure)throw error;
-    throw new Error(`GitHub fetch failed on both paths. ${error?.message||firstError?.message||'Network failure.'}`);
+    throw new Error(`Git seed fetch failed on both paths. ${error?.message||firstError?.message||'Network failure.'}`);
   }
+}
+
+async function fetchDashboard(token){
+  const released=await fetchVerifiedReleaseDashboard(token);
+  if(released){
+    setStatus('Verified runtime Release manifest and dashboard SHA-256. Opening…','good');
+    return released;
+  }
+  setStatus('Runtime Release not bootstrapped yet. Using the signed Git seed for this transition…','warn');
+  return await fetchLegacyDashboard(token);
 }
 
 function injectHandshake(html){
@@ -197,11 +279,11 @@ async function loadDashboard(tokenOverride=''){
       setStatus('No saved credential on this browser. Use Connect / replace GitHub token once.');
       return;
     }
-    setStatus('Loading and validating Control Room V4…');
+    setStatus('Loading and cryptographically validating the Control Room…');
     let html=await fetchDashboard(token);
     html=applyKnownV4Compatibility(html);
     const patches=window.MONITOR_LAUNCHER_COMPAT_PATCHES||[];
-    setStatus(patches.length?`Compatibility repair applied: ${patches.join(', ')}. Opening…`:'Current V4 build verified. Opening…','good');
+    setStatus(patches.length?`Compatibility repair applied: ${patches.join(', ')}. Opening…`:'Current verified build opening…','good');
     history.replaceState(null,'','#terminal');
     document.open();
     document.write(injectHandshake(html));
@@ -221,7 +303,7 @@ async function connect(){
   if(!token)return;
   const clean=token.trim();
   try{
-    setStatus('Verifying private repository access…');
+    setStatus('Verifying private repository and runtime-state access…');
     await fetchDashboard(clean);
     if(!saveToken(clean))throw new Error('This browser refused to save the token.');
     await loadDashboard(clean);

@@ -124,12 +124,18 @@ def validate_kucoin_launcher(errors: list[str]) -> None:
     lower = text.lower()
 
     required = (
-        "LAUNCHER V4.4",
+        "LAUNCHER V4.5",
         "kucoin-monitor-github-read-token-v1",
         "applyKnownV4Compatibility",
         "validateDashboard",
         "v4LauncherHandshake",
         "Contents: Read-only",
+        "runtime-state-v1",
+        "runtime_state_manifest.json",
+        "KUCOIN_RUNTIME_STATE_RELEASE_V1",
+        "crypto.subtle.digest",
+        "dashboard SHA-256 mismatch",
+        "Runtime Release not bootstrapped yet",
     )
     for marker in required:
         if marker not in text:
