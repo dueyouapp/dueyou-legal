@@ -1,240 +1,48 @@
 <!doctype html>
-<!-- KuCoin Futures private launcher · V4.4 parser-safe compatibility bridge -->
+<!-- KuCoin Futures private launcher · Control Room V5 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#07111f">
+<meta name="theme-color" content="#05070b">
 <title>KuCoin Futures Control Room</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#07111f;color:#eaf4ff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{display:grid;place-items:center;padding:20px}.card{width:min(560px,100%);padding:22px;border:1px solid #243447;border-radius:22px;background:linear-gradient(145deg,#111d2f,#08121f);box-shadow:0 20px 60px rgba(0,0,0,.35)}.eyebrow{margin:0 0 8px;color:#61d5ff;font-weight:850;letter-spacing:.11em;font-size:.72rem}h1{margin:0 0 10px;font-size:1.7rem}p{color:#a9bbcf;line-height:1.52}.status{margin:18px 0;padding:12px 14px;border:1px solid #243447;border-radius:14px;background:#07111f;color:#cbd9e8;font-size:.86rem;line-height:1.45;overflow-wrap:anywhere}.good{border-color:rgba(92,231,177,.45);color:#9ff3cf}.bad{border-color:rgba(255,128,149,.45);color:#ffb0bd}.warn{border-color:rgba(245,196,94,.45);color:#f7d98f}.actions{display:flex;gap:10px;flex-wrap:wrap}button{flex:1;min-width:150px;border:1px solid #2d4660;border-radius:12px;background:#0b1b2e;color:#eef7ff;padding:12px 14px;font-weight:800;font-size:.95rem}.primary{background:#123757;border-color:#2b78a9}.fine{font-size:.73rem;color:#7990a8;margin-top:15px}@media(max-width:520px){body{padding:14px}.card{padding:18px}.actions{display:grid}.actions button{width:100%}}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#05070b;color:#f4f8fc;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}body{display:grid;place-items:center;padding:18px;background:radial-gradient(circle at 50% -10%,rgba(65,215,255,.1),transparent 38%),#05070b}.card{width:min(520px,100%);padding:22px;border:1px solid #1b2836;border-radius:18px;background:#0a0f16;box-shadow:0 20px 70px rgba(0,0,0,.45)}.eyebrow{margin:0 0 7px;color:#41d7ff;font-size:.68rem;font-weight:900;letter-spacing:.12em}h1{margin:0;font-size:1.7rem}p{color:#8797aa;line-height:1.5}.status{margin:17px 0;padding:11px 12px;border:1px solid #223243;border-radius:11px;background:#070b10;color:#b8c5d4;font-size:.82rem;overflow-wrap:anywhere}.status.good{border-color:rgba(39,231,162,.4);color:#a6f8d8}.status.bad{border-color:rgba(255,95,120,.42);color:#ffb3bf}.status.warn{border-color:rgba(246,200,95,.42);color:#ffe09b}.actions{display:flex;gap:8px}button{flex:1;min-height:44px;border:1px solid #28394c;border-radius:10px;background:#0d1721;color:#edf7ff;font-weight:850}.primary{border-color:rgba(65,215,255,.5);background:rgba(65,215,255,.09)}.fine{margin-bottom:0;font-size:.7rem;color:#65758a}@media(max-width:520px){body{padding:12px}.card{padding:18px}.actions{display:grid}}
 </style>
 </head>
 <body>
 <main class="card">
-<p class="eyebrow">PRIVATE KUCOIN FUTURES · LAUNCHER V4.4</p>
+<p class="eyebrow">PRIVATE KUCOIN FUTURES · V5</p>
 <h1>Control Room</h1>
-<p>Loads and verifies the newest private Control Room from the monitor repository. Older pre-fix V4 builds are repaired before their JavaScript is executed.</p>
-<div id="status" class="status">Starting launcher…</div>
+<p>Loads the newest verified clean dashboard directly from the private monitor repository.</p>
+<div id="status" class="status">Checking private dashboard…</div>
 <div class="actions">
 <button id="open" class="primary" type="button">Open Control Room</button>
-<button id="connect" type="button">Connect / replace GitHub token</button>
+<button id="connect" type="button">Connect / replace token</button>
 </div>
-<p class="fine">Required token scope: dueyouapp/kucoin-futures-monitor only, Contents: Read-only. No KuCoin private credential is stored here.</p>
+<p class="fine">GitHub token scope: this repository only, Contents: Read-only. No KuCoin private credential is stored by this launcher.</p>
 </main>
 <script>
 (()=>{'use strict';
 const REPO='dueyouapp/kucoin-futures-monitor';
-const BRANCH='main';
-const DASHBOARD_PATH='dashboard/live.html';
+const PATH='dashboard/live.html';
 const TOKEN_KEY='kucoin-monitor-github-read-token-v1';
-const REQUIRED=['CONTROL ROOM V4','PROJECTED CANDLES','CHART KEY / ABBREVIATIONS','window.MONITOR_SNAPSHOT'];
-const status=document.getElementById('status');
-const openButton=document.getElementById('open');
-const connectButton=document.getElementById('connect');
+const REQUIRED=['CONTROL ROOM V5','KUCOIN QUANT CONTROL','window.MONITOR_SNAPSHOT','TradingView Lightweight Charts'];
+const FORBIDDEN=['CONTROL ROOM V4','MVP HEALTH CONTRACT','terminal_ui.js','command_center_ui.js','mvp_ui.js'];
+const status=document.getElementById('status'),open=document.getElementById('open'),connect=document.getElementById('connect');
 let busy=false;
-
-const setStatus=(message,tone='')=>{
-  status.textContent=message;
-  status.className='status'+(tone?' '+tone:'');
-};
-const getToken=()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(_){return ''}};
-const saveToken=token=>{try{localStorage.setItem(TOKEN_KEY,token);return true}catch(_){return false}};
-const clearToken=()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(_){}};
-const apiUrl=()=>`https://api.github.com/repos/${REPO}/contents/${DASHBOARD_PATH}?ref=${encodeURIComponent(BRANCH)}&ts=${Date.now()}`;
-
-function decodeBase64Utf8(value){
-  const binary=atob(String(value||'').replace(/\s+/g,''));
-  const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
-  return new TextDecoder('utf-8').decode(bytes);
-}
-
-function validateDashboard(html){
-  const text=String(html||'');
-  const missing=[];
-  if(!/<!doctype\s+html|<html[\s>]/i.test(text))missing.push('HTML shell');
-  for(const marker of REQUIRED)if(!text.includes(marker))missing.push(marker);
-  if(missing.length)throw new Error(`Refusing stale/incomplete dashboard. Missing: ${missing.join(', ')}.`);
-  return text;
-}
-
-function applyKnownV4Compatibility(html){
-  let text=String(html||'');
-  const patches=[];
-
-  const installStart=text.indexOf('  function installMarkerAbbreviations(){');
-  const installEnd=installStart>=0?text.indexOf('\n  function setupTargets(',installStart):-1;
-  if(installStart>=0&&installEnd>installStart){
-    const segment=text.slice(installStart,installEnd);
-    if(segment.includes('lib.createSeriesMarkers=function')){
-      const safe=[
-        '  function installMarkerAbbreviations(){',
-        '    // Launcher compatibility for pre-fix V4 only.',
-        '    // TradingView standalone exports are frozen, so never monkey-patch them.',
-        '    V4.markerWrapped=true;',
-        '  }',
-        ''
-      ].join('\n');
-      text=text.slice(0,installStart)+safe+text.slice(installEnd);
-      patches.push('frozen-export');
-    }
-  }
-
-  const oldMarkers=[
-    '      const all=[...markers,...evidence,...pattern].sort((a,b)=>Number(a.time)-Number(b.time)).slice(-16);',
-    "      if(all.length&&typeof lib.createSeriesMarkers==='function')lib.createSeriesMarkers(candles,all,{autoScale:false});"
-  ].join('\n');
-  const compactMarkers=[
-    '      const all=[...markers,...evidence,...pattern].sort((a,b)=>Number(a.time)-Number(b.time)).slice(-16);',
-    "      const compact=all.map(marker=>{const raw=String(marker.text||'').trim(),u=raw.toUpperCase();let t=raw;if(u.includes('CONFIRMED HIGH'))t='CH';else if(u.includes('CONFIRMED LOW'))t='CL';else if(u==='ZONE'||u.includes('ZONE TOUCH'))t='Z';else if(u.includes('IFVG')&&u.includes('HOLD'))t='IH';else if(u.includes('IFVG'))t='IF';else if(u.startsWith('BOS'))t='BOS';else if(u.startsWith('MSS'))t='MSS';else if(u==='HOLD')t='H';else if(raw.length>6)t=raw.slice(0,6);return {...marker,text:t,size:Math.min(Number(marker.size||.6),.48)};});",
-    "      if(compact.length&&typeof lib.createSeriesMarkers==='function')lib.createSeriesMarkers(candles,compact,{autoScale:false});"
-  ].join('\n');
-  if(text.includes(oldMarkers)){
-    text=text.replace(oldMarkers,compactMarkers);
-    patches.push('compact-markers');
-  }
-
-  const boundary='\n/* CONTROL ROOM V4\n * A full presentation redesign';
-  const closeScript='<'+'/script>';
-  const openScript='<script>';
-  const separated=closeScript+'\n  '+openScript+'\n/* CONTROL ROOM V4\n * A full presentation redesign';
-  if(text.includes(boundary)&&!text.includes(separated)){
-    text=text.replace(boundary,'\n'+separated,1);
-    patches.push('script-isolation');
-  }
-
-  window.MONITOR_LAUNCHER_COMPAT_PATCHES=patches;
-  return text;
-}
-
-function authError(){
-  const error=new Error('Private dashboard access failed. Use Connect / replace GitHub token below.');
-  error.authFailure=true;
-  return error;
-}
-
-async function rawFetch(token){
-  const response=await fetch(apiUrl(),{
-    cache:'no-store',
-    credentials:'omit',
-    headers:{
-      Accept:'application/vnd.github.raw',
-      Authorization:`Bearer ${token}`,
-      'X-GitHub-Api-Version':'2022-11-28'
-    }
-  });
-  if(!response.ok){
-    if([401,403,404].includes(response.status))throw authError();
-    throw new Error(`GitHub returned HTTP ${response.status}.`);
-  }
-  return validateDashboard(await response.text());
-}
-
-async function jsonFetch(token){
-  const response=await fetch(apiUrl(),{
-    cache:'no-store',
-    credentials:'omit',
-    headers:{
-      Accept:'application/vnd.github+json',
-      Authorization:`Bearer ${token}`,
-      'X-GitHub-Api-Version':'2022-11-28'
-    }
-  });
-  if(!response.ok){
-    if([401,403,404].includes(response.status))throw authError();
-    throw new Error(`GitHub returned HTTP ${response.status}.`);
-  }
-  const payload=await response.json();
-  if(!payload||typeof payload.content!=='string')throw new Error('GitHub returned an unexpected dashboard payload.');
-  return validateDashboard(decodeBase64Utf8(payload.content));
-}
-
-async function fetchDashboard(token){
-  let firstError;
-  try{
-    return await rawFetch(token);
-  }catch(error){
-    firstError=error;
-    if(error?.authFailure)throw error;
-  }
-  setStatus('Primary GitHub fetch blocked. Retrying through Contents API…','warn');
-  try{
-    return await jsonFetch(token);
-  }catch(error){
-    if(error?.authFailure)throw error;
-    throw new Error(`GitHub fetch failed on both paths. ${error?.message||firstError?.message||'Network failure.'}`);
-  }
-}
-
-function injectHandshake(html){
-  const closeScript='<'+'/script>';
-  const body=[
-    "(()=>{'use strict';",
-    "let lastError='';",
-    "const remember=e=>{lastError=String(e?.message||e?.reason?.message||e?.reason||'runtime error').slice(0,110)};",
-    "window.addEventListener('error',remember,true);",
-    "window.addEventListener('unhandledrejection',remember,true);",
-    "const route=()=>{if(location.hash!=='#terminal')history.replaceState(null,'','#terminal')};",
-    "const badge=ok=>{let el=document.getElementById('v4RuntimeBadge');if(!el){el=document.createElement('div');el.id='v4RuntimeBadge';el.style.cssText='position:fixed;right:8px;top:8px;z-index:2147483647;padding:5px 8px;border-radius:999px;font:800 10px/1.2 system-ui,sans-serif;letter-spacing:.04em;max-width:72vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.28);pointer-events:none';document.body.appendChild(el)}el.textContent=ok?'V4 LIVE':('V4 ERROR'+(lastError?': '+lastError:''));el.style.color=ok?'#9ff3cf':'#ffb0bd';el.style.background=ok?'rgba(6,35,27,.94)':'rgba(43,10,18,.96)';el.style.border='1px solid '+(ok?'rgba(92,231,177,.5)':'rgba(255,128,149,.55)')};",
-    "const verify=()=>{route();const terminal=document.querySelector('#app .terminal');if(terminal&&!terminal.classList.contains('cr-v4')){try{window.monitorRenderControlRoom?.();window.dispatchEvent(new Event('hashchange'));window.monitorApplyProjectedScenarioCandles?.()}catch(error){remember(error)}}const live=!!document.querySelector('#app .terminal.cr-v4');badge(live);document.documentElement.dataset.controlRoomV4Runtime=live?'live':'error';return live};",
-    "route();",
-    "document.addEventListener('DOMContentLoaded',()=>{setTimeout(verify,200);setTimeout(verify,800);setTimeout(verify,1800)},{once:true});",
-    "})();"
-  ].join('');
-  const script='<script id="v4LauncherHandshake">'+body+closeScript;
-  return String(html).replace(/<\/body>/i,script+'</body>');
-}
-
-async function loadDashboard(tokenOverride=''){
-  if(busy)return;
-  busy=true;
-  openButton.disabled=true;
-  connectButton.disabled=true;
-  try{
-    const token=String(tokenOverride||getToken()).trim();
-    if(!token){
-      setStatus('No saved credential on this browser. Use Connect / replace GitHub token once.');
-      return;
-    }
-    setStatus('Loading and validating Control Room V4…');
-    let html=await fetchDashboard(token);
-    html=applyKnownV4Compatibility(html);
-    const patches=window.MONITOR_LAUNCHER_COMPAT_PATCHES||[];
-    setStatus(patches.length?`Compatibility repair applied: ${patches.join(', ')}. Opening…`:'Current V4 build verified. Opening…','good');
-    history.replaceState(null,'','#terminal');
-    document.open();
-    document.write(injectHandshake(html));
-    document.close();
-  }catch(error){
-    if(error?.authFailure)clearToken();
-    setStatus(error?.message||'Unable to load the private Control Room.','bad');
-  }finally{
-    busy=false;
-    openButton.disabled=false;
-    connectButton.disabled=false;
-  }
-}
-
-async function connect(){
-  const token=prompt('Paste the fine-grained GitHub token for dueyouapp/kucoin-futures-monitor with Contents: Read-only permission.');
-  if(!token)return;
-  const clean=token.trim();
-  try{
-    setStatus('Verifying private repository access…');
-    await fetchDashboard(clean);
-    if(!saveToken(clean))throw new Error('This browser refused to save the token.');
-    await loadDashboard(clean);
-  }catch(error){
-    if(error?.authFailure)clearToken();
-    setStatus(error?.message||'GitHub connection failed.','bad');
-  }
-}
-
-openButton.addEventListener('click',()=>loadDashboard());
-connectButton.addEventListener('click',connect);
-if(getToken())loadDashboard();
-else setStatus('No saved credential on this browser. Use Connect / replace GitHub token once.');
+const setStatus=(text,tone='')=>{status.textContent=text;status.className='status'+(tone?' '+tone:'')};
+const token=()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(_){return''}};
+const save=v=>{try{localStorage.setItem(TOKEN_KEY,v);return true}catch(_){return false}};
+const clear=()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(_){}};
+const url=()=>`https://api.github.com/repos/${REPO}/contents/${PATH}?ref=main&ts=${Date.now()}`;
+function validate(html){const text=String(html||'');const missing=REQUIRED.filter(x=>!text.includes(x));const legacy=FORBIDDEN.filter(x=>text.includes(x));if(missing.length)throw new Error(`V5 is not deployed yet. Missing: ${missing.join(', ')}.`);if(legacy.length)throw new Error(`Refusing legacy dashboard: ${legacy.join(', ')}.`);return text}
+function decode(v){const raw=atob(String(v||'').replace(/\s+/g,''));return new TextDecoder().decode(Uint8Array.from(raw,c=>c.charCodeAt(0)))}
+async function fetchDashboard(key){const headers={Accept:'application/vnd.github.raw',Authorization:`Bearer ${key}`,'X-GitHub-Api-Version':'2022-11-28'};let res=await fetch(url(),{cache:'no-store',credentials:'omit',headers});if(res.ok)return validate(await res.text());if([401,403,404].includes(res.status)){clear();const e=new Error('Private repository access failed. Use Connect / replace token.');e.auth=true;throw e}headers.Accept='application/vnd.github+json';res=await fetch(url(),{cache:'no-store',credentials:'omit',headers});if(!res.ok)throw new Error(`GitHub returned HTTP ${res.status}.`);const body=await res.json();return validate(decode(body.content))}
+async function load(override=''){if(busy)return;busy=true;open.disabled=connect.disabled=true;try{const key=String(override||token()).trim();if(!key){setStatus('Connect the private GitHub token once on this browser.','warn');return}setStatus('Fetching current Control Room V5…');const html=await fetchDashboard(key);setStatus('V5 verified. Opening…','good');history.replaceState(null,'','#control-room-v5');document.open();document.write(html);document.close()}catch(e){setStatus(e?.message||'Unable to load Control Room V5.','bad')}finally{busy=false;open.disabled=connect.disabled=false}}
+async function doConnect(){const value=prompt('Paste the fine-grained GitHub token for dueyouapp/kucoin-futures-monitor with Contents: Read-only permission.');if(!value)return;const key=value.trim();try{setStatus('Verifying repository access…');await fetchDashboard(key);if(!save(key))throw new Error('This browser refused to save the token.');await load(key)}catch(e){if(e?.auth)clear();setStatus(e?.message||'GitHub connection failed.','bad')}}
+open.addEventListener('click',()=>load());connect.addEventListener('click',doConnect);if(token())load();else setStatus('Connect the private GitHub token once on this browser.','warn');
 })();
 </script>
 </body>
