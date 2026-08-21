@@ -6,6 +6,8 @@
   const DEFAULT_REPO='dueyouapp/kucoin-futures-monitor';
   const DEFAULT_RELEASE_TAG='runtime-state-v1';
   const DEFAULT_MANIFEST_ASSET='runtime_state_manifest.json';
+  const SUPPORTED_LOADER_CONTRACT_VERSION=1;
+  const DASHBOARD_ARTIFACT_TYPE='KUCOIN_CONTROL_ROOM_STANDALONE_HTML';
 
   class LauncherError extends Error{
     constructor(code,message,options={}){
@@ -27,13 +29,14 @@
     const assets=Array.isArray(release&&release.assets)?release.assets:[];
     return assets.find(asset=>String(asset&&asset.name||'')===String(name||''))||null;
   }
-  function validateManifest(manifest){
+  function validateManifest(manifest,expected={}){
     if(!manifest||typeof manifest!=='object'||Array.isArray(manifest))throw new LauncherError('MANIFEST_INVALID','Runtime manifest is not a JSON object.');
     if(Number(manifest.schema_version)!==1)throw new LauncherError('MANIFEST_UNSUPPORTED','Unsupported runtime-state manifest schema.');
     if(manifest.authority!=='KUCOIN_RUNTIME_STATE_RELEASE_V1')throw new LauncherError('MANIFEST_INVALID','Runtime manifest authority is invalid.');
     if(manifest.trade_authority!==false)throw new LauncherError('MANIFEST_INVALID','Runtime-state manifest unexpectedly claims trading authority.');
     const policy=manifest.policy;
     if(!policy||policy.release_is_runtime_state_authority!==true||policy.runtime_state_has_no_trade_authority!==true||policy.checksum_required_before_restore!==true)throw new LauncherError('MANIFEST_INVALID','Runtime-state safety policy is incomplete.');
+
     const dashboard=manifest.dashboard_asset;
     if(!dashboard||typeof dashboard!=='object')throw new LauncherError('MANIFEST_INVALID','Runtime manifest has no dashboard asset contract.');
     const name=String(dashboard.name||'').trim();
@@ -42,7 +45,35 @@
     if(!/^[0-9a-f]{64}$/.test(sha256))throw new LauncherError('MANIFEST_INVALID','Runtime dashboard SHA-256 is missing or malformed.');
     const bytes=Number(dashboard.bytes);
     if(!Number.isSafeInteger(bytes)||bytes<=0)throw new LauncherError('MANIFEST_INVALID','Runtime dashboard byte count is invalid.');
-    return {name,sha256,bytes,createdAt:String(manifest.created_at||''),sourceSha:String(manifest.source_sha||'')};
+
+    const loader=manifest.dashboard_contract;
+    if(!loader||typeof loader!=='object'||Array.isArray(loader))throw new LauncherError('LOADER_CONTRACT_INVALID','Runtime manifest has no dashboard loader contract.');
+    if(Number(loader.loader_contract_version)!==SUPPORTED_LOADER_CONTRACT_VERSION)throw new LauncherError('LOADER_CONTRACT_UNSUPPORTED','Unsupported dashboard loader contract version.');
+    if(String(loader.artifact_type||'')!==DASHBOARD_ARTIFACT_TYPE)throw new LauncherError('LOADER_CONTRACT_INVALID','Dashboard artifact type is invalid.');
+    if(loader.requires_sha256!==true)throw new LauncherError('LOADER_CONTRACT_INVALID','Dashboard loader contract does not require SHA-256.');
+    if(loader.generation_agnostic!==true)throw new LauncherError('LOADER_CONTRACT_INVALID','Dashboard loader contract is not generation-agnostic.');
+    const transportTag=String(loader.transport_tag||'').trim();
+    const manifestAsset=String(loader.manifest_asset||'').trim();
+    const dashboardAsset=String(loader.dashboard_asset||'').trim();
+    if(!transportTag||!manifestAsset||!dashboardAsset)throw new LauncherError('LOADER_CONTRACT_INVALID','Dashboard loader contract asset identity is incomplete.');
+    if(dashboardAsset!==name)throw new LauncherError('LOADER_CONTRACT_INVALID','Dashboard loader contract disagrees with the checksummed dashboard asset.');
+    if(expected.releaseTag&&transportTag!==String(expected.releaseTag))throw new LauncherError('LOADER_CONTRACT_INVALID','Dashboard loader contract Release tag does not match the requested transport.');
+    if(expected.manifestAssetName&&manifestAsset!==String(expected.manifestAssetName))throw new LauncherError('LOADER_CONTRACT_INVALID','Dashboard loader contract manifest asset does not match the verified bootstrap asset.');
+
+    return {
+      name,sha256,bytes,
+      createdAt:String(manifest.created_at||''),
+      sourceSha:String(manifest.source_sha||''),
+      loaderContract:{
+        version:SUPPORTED_LOADER_CONTRACT_VERSION,
+        artifactType:DASHBOARD_ARTIFACT_TYPE,
+        transportTag,
+        manifestAsset,
+        dashboardAsset,
+        requiresSha256:true,
+        generationAgnostic:true
+      }
+    };
   }
   async function fetchReleaseMetadata({token,repo,releaseTag,fetchImpl}){
     let response;
@@ -88,7 +119,7 @@
     const manifestBytes=await fetchAssetBytes({asset:manifestAsset,token,fetchImpl});
     let manifest;
     try{manifest=JSON.parse(decodeUtf8(manifestBytes))}catch(error){if(error instanceof LauncherError)throw error;throw new LauncherError('MANIFEST_INVALID','Runtime-state Release manifest is malformed JSON.');}
-    const contract=validateManifest(manifest);
+    const contract=validateManifest(manifest,{releaseTag,manifestAssetName});
     const dashboardAsset=assetByName(release,contract.name);
     if(!dashboardAsset)throw new LauncherError('ASSET_UNAVAILABLE',`Runtime dashboard asset ${contract.name} is missing from the verified Release.`);
     const dashboardBytes=await fetchAssetBytes({asset:dashboardAsset,token,fetchImpl});
@@ -98,5 +129,5 @@
     const html=validateHtmlShell(decodeUtf8(dashboardBytes));
     return {html,manifest,contract,releaseId:release.id||null,releaseTag};
   }
-  return {DEFAULT_REPO,DEFAULT_RELEASE_TAG,DEFAULT_MANIFEST_ASSET,LauncherError,assetByName,validateManifest,sha256Hex,validateHtmlShell,loadVerifiedDashboard};
+  return {DEFAULT_REPO,DEFAULT_RELEASE_TAG,DEFAULT_MANIFEST_ASSET,SUPPORTED_LOADER_CONTRACT_VERSION,DASHBOARD_ARTIFACT_TYPE,LauncherError,assetByName,validateManifest,sha256Hex,validateHtmlShell,loadVerifiedDashboard};
 });
