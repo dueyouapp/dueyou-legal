@@ -1,0 +1,55 @@
+name: One-shot public branch hygiene
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/public_branch_hygiene_once.py'
+      - '.github/workflows/public-branch-hygiene-once.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/public_branch_hygiene_once.py'
+      - '.github/workflows/public-branch-hygiene-once.yml'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Self-test branch hygiene contract
+        run: python scripts/public_branch_hygiene_once.py --self-test
+
+  cleanup:
+    if: >-
+      github.event_name == 'push' &&
+      contains(github.event.head_commit.message, '[PUBLIC-BRANCH-HYGIENE-ONCE]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: dueyou-public-branch-hygiene-once
+      cancel-in-progress: false
+    steps:
+      - name: Checkout triggering main with full history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Archive unique tips and prune only audited targets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python scripts/public_branch_hygiene_once.py \
+            --repository "$GITHUB_REPOSITORY" \
+            --expected-main-sha "$GITHUB_SHA"
