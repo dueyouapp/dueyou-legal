@@ -18,6 +18,8 @@ PUBLIC_PAGES = [
 ]
 ALL_HTML = PUBLIC_PAGES + ["404.html"]
 KUCOIN_LAUNCHER = ROOT / "kucoin-monitor" / "index.html"
+KUCOIN_LAUNCHER_CORE = ROOT / "kucoin-monitor" / "launcher-core.js"
+KUCOIN_LAUNCHER_TEST = ROOT / "scripts" / "test_kucoin_launcher.js"
 EXPECTED_BASE = "https://dueyouapp.github.io/dueyou-legal/"
 
 
@@ -115,54 +117,11 @@ def validate_html(errors: list[str]) -> None:
                 fail(errors, f"{name}: broken internal link: {href}")
 
 
-def validate_kucoin_launcher(errors: list[str]) -> None:
-    if not KUCOIN_LAUNCHER.exists():
-        fail(errors, "kucoin-monitor/index.html: missing private launcher")
-        return
-
-    text = KUCOIN_LAUNCHER.read_text(encoding="utf-8")
-    lower = text.lower()
-
-    required = (
-        "LAUNCHER V4.4",
-        "kucoin-monitor-github-read-token-v1",
-        "applyKnownV4Compatibility",
-        "validateDashboard",
-        "v4LauncherHandshake",
-        "Contents: Read-only",
-    )
-    for marker in required:
-        if marker not in text:
-            fail(errors, f"kucoin-monitor/index.html: missing launcher contract marker {marker!r}")
-
-    # HTML script parsing terminates on a literal closing-script sentinel even
-    # when that text appears inside a JavaScript string. The launcher therefore
-    # must contain exactly one real closing tag: the tag that closes its own
-    # inline JavaScript block. Runtime-injected tags are assembled from pieces.
-    closing_count = lower.count("</script>")
-    if closing_count != 1:
-        fail(
-            errors,
-            "kucoin-monitor/index.html: expected exactly one literal </script> "
-            f"sentinel, found {closing_count}",
-        )
-
-    script_open = lower.find("<script>")
-    script_close = lower.rfind("</script>")
-    if script_open < 0 or script_close <= script_open:
-        fail(errors, "kucoin-monitor/index.html: inline launcher script boundary is invalid")
-        return
-
-    javascript = text[script_open + len("<script>") : script_close]
-    if not javascript.strip():
-        fail(errors, "kucoin-monitor/index.html: inline launcher JavaScript is empty")
-        return
-
+def _node_check(errors: list[str], *, label: str, javascript: str) -> None:
     node = shutil.which("node")
     if not node:
-        fail(errors, "kucoin-monitor/index.html: Node.js is required for launcher syntax validation")
+        fail(errors, f"{label}: Node.js is required for JavaScript validation")
         return
-
     completed = subprocess.run(
         [node, "--check", "-"],
         input=javascript,
@@ -172,7 +131,103 @@ def validate_kucoin_launcher(errors: list[str]) -> None:
     )
     if completed.returncode != 0:
         detail = (completed.stderr or completed.stdout).strip()
-        fail(errors, f"kucoin-monitor/index.html: launcher JavaScript syntax error: {detail}")
+        fail(errors, f"{label}: JavaScript syntax error: {detail}")
+
+
+def validate_kucoin_launcher(errors: list[str]) -> None:
+    for path in (KUCOIN_LAUNCHER, KUCOIN_LAUNCHER_CORE, KUCOIN_LAUNCHER_TEST):
+        if not path.exists():
+            fail(errors, f"{path.relative_to(ROOT)}: missing KuCoin launcher contract file")
+    if errors and not KUCOIN_LAUNCHER.exists():
+        return
+
+    html = KUCOIN_LAUNCHER.read_text(encoding="utf-8")
+    core = KUCOIN_LAUNCHER_CORE.read_text(encoding="utf-8") if KUCOIN_LAUNCHER_CORE.exists() else ""
+    combined = html + "\n" + core
+
+    required = (
+        "runtime-state-v1",
+        "runtime_state_manifest.json",
+        "KUCOIN_RUNTIME_STATE_RELEASE_V1",
+        "release_is_runtime_state_authority",
+        "runtime_state_has_no_trade_authority",
+        "checksum_required_before_restore",
+        "SHA-256",
+        "kucoin-monitor-github-read-token-v1",
+        "Contents: Read-only",
+        "launcher-core.js",
+    )
+    for marker in required:
+        if marker not in combined:
+            fail(errors, f"KuCoin launcher: missing runtime-state verification marker {marker!r}")
+
+    forbidden = (
+        "CONTROL ROOM V4",
+        "cr-v4",
+        "applyKnownV4Compatibility",
+        "v4LauncherHandshake",
+        "terminal_ui.js",
+        "command_center_ui.js",
+        "mvp_ui.js",
+    )
+    for marker in forbidden:
+        if marker in combined:
+            fail(errors, f"KuCoin launcher: obsolete V4 dependency remains: {marker!r}")
+
+    # The launcher contract must be generation-neutral. V5 is the dashboard today,
+    # but the verified runtime manifest owns the dashboard artifact identity.
+    if "CONTROL ROOM V5" in combined:
+        fail(errors, "KuCoin launcher: hard-coded V5 dashboard generation contract is forbidden")
+
+    if 'name="viewport"' not in html:
+        fail(errors, "kucoin-monitor/index.html: missing mobile viewport meta tag")
+    if "@media(max-width:520px)" not in html.replace(" ", ""):
+        fail(errors, "kucoin-monitor/index.html: missing narrow/mobile layout rule")
+
+    _node_check(errors, label="kucoin-monitor/launcher-core.js", javascript=core)
+
+    # Extract inline scripts only. External launcher-core.js is checked above.
+    cursor = 0
+    lower = html.lower()
+    inline_index = 0
+    while True:
+        start = lower.find("<script", cursor)
+        if start < 0:
+            break
+        tag_end = lower.find(">", start)
+        if tag_end < 0:
+            fail(errors, "kucoin-monitor/index.html: malformed <script> opening tag")
+            break
+        close = lower.find("</script>", tag_end)
+        if close < 0:
+            fail(errors, "kucoin-monitor/index.html: unterminated <script> element")
+            break
+        opening = lower[start : tag_end + 1]
+        if " src=" not in opening:
+            inline_index += 1
+            javascript = html[tag_end + 1 : close]
+            if not javascript.strip():
+                fail(errors, f"kucoin-monitor/index.html: inline script {inline_index} is empty")
+            else:
+                _node_check(
+                    errors,
+                    label=f"kucoin-monitor/index.html inline script {inline_index}",
+                    javascript=javascript,
+                )
+        cursor = close + len("</script>")
+
+    node = shutil.which("node")
+    if node and KUCOIN_LAUNCHER_TEST.exists():
+        completed = subprocess.run(
+            [node, str(KUCOIN_LAUNCHER_TEST)],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            detail = (completed.stderr or completed.stdout).strip()
+            fail(errors, f"KuCoin launcher behavioral regression tests failed: {detail}")
 
 
 def validate_sitemap(errors: list[str]) -> None:
@@ -219,7 +274,7 @@ def main() -> int:
 
     print(
         f"Site validation passed for {len(ALL_HTML)} legal pages "
-        "and the KuCoin private launcher."
+        "and the checksum-verified KuCoin private launcher."
     )
     return 0
 
