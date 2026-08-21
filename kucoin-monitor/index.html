@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- KuCoin Futures private launcher · Control Room V5 -->
+<!-- KuCoin Futures private launcher · verified runtime-state-v1 loader -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -13,36 +13,56 @@
 </head>
 <body>
 <main class="card">
-<p class="eyebrow">PRIVATE KUCOIN FUTURES · V5</p>
+<p class="eyebrow">PRIVATE KUCOIN FUTURES · VERIFIED RELEASE</p>
 <h1>Control Room</h1>
-<p>Loads the newest verified clean dashboard directly from the private monitor repository.</p>
-<div id="status" class="status">Checking private dashboard…</div>
+<p>Loads the newest checksum-verified canonical dashboard from the private runtime-state Release. No unverified fallback is executed.</p>
+<div id="status" class="status">Checking verified runtime state…</div>
 <div class="actions">
 <button id="open" class="primary" type="button">Open Control Room</button>
 <button id="connect" type="button">Connect / replace token</button>
 </div>
-<p class="fine">GitHub token scope: this repository only, Contents: Read-only. No KuCoin private credential is stored by this launcher.</p>
+<p class="fine">GitHub token scope: dueyouapp/kucoin-futures-monitor only, Contents: Read-only. No KuCoin private credential is stored by this launcher.</p>
 </main>
+<script src="launcher-core.js"></script>
 <script>
 (()=>{'use strict';
-const REPO='dueyouapp/kucoin-futures-monitor';
-const PATH='dashboard/live.html';
 const TOKEN_KEY='kucoin-monitor-github-read-token-v1';
-const REQUIRED=['CONTROL ROOM V5','KUCOIN QUANT CONTROL','window.MONITOR_SNAPSHOT','TradingView Lightweight Charts'];
-const FORBIDDEN=['CONTROL ROOM V4','MVP HEALTH CONTRACT','terminal_ui.js','command_center_ui.js','mvp_ui.js'];
 const status=document.getElementById('status'),open=document.getElementById('open'),connect=document.getElementById('connect');
+const core=window.KucoinLauncherCore;
 let busy=false;
 const setStatus=(text,tone='')=>{status.textContent=text;status.className='status'+(tone?' '+tone:'')};
 const token=()=>{try{return localStorage.getItem(TOKEN_KEY)||''}catch(_){return''}};
-const save=v=>{try{localStorage.setItem(TOKEN_KEY,v);return true}catch(_){return false}};
+const save=value=>{try{localStorage.setItem(TOKEN_KEY,value);return true}catch(_){return false}};
 const clear=()=>{try{localStorage.removeItem(TOKEN_KEY)}catch(_){}};
-const url=()=>`https://api.github.com/repos/${REPO}/contents/${PATH}?ref=main&ts=${Date.now()}`;
-function validate(html){const text=String(html||'');const missing=REQUIRED.filter(x=>!text.includes(x));const legacy=FORBIDDEN.filter(x=>text.includes(x));if(missing.length)throw new Error(`V5 is not deployed yet. Missing: ${missing.join(', ')}.`);if(legacy.length)throw new Error(`Refusing legacy dashboard: ${legacy.join(', ')}.`);return text}
-function decode(v){const raw=atob(String(v||'').replace(/\s+/g,''));return new TextDecoder().decode(Uint8Array.from(raw,c=>c.charCodeAt(0)))}
-async function fetchDashboard(key){const headers={Accept:'application/vnd.github.raw',Authorization:`Bearer ${key}`,'X-GitHub-Api-Version':'2022-11-28'};let res=await fetch(url(),{cache:'no-store',credentials:'omit',headers});if(res.ok)return validate(await res.text());if([401,403,404].includes(res.status)){clear();const e=new Error('Private repository access failed. Use Connect / replace token.');e.auth=true;throw e}headers.Accept='application/vnd.github+json';res=await fetch(url(),{cache:'no-store',credentials:'omit',headers});if(!res.ok)throw new Error(`GitHub returned HTTP ${res.status}.`);const body=await res.json();return validate(decode(body.content))}
-async function load(override=''){if(busy)return;busy=true;open.disabled=connect.disabled=true;try{const key=String(override||token()).trim();if(!key){setStatus('Connect the private GitHub token once on this browser.','warn');return}setStatus('Fetching current Control Room V5…');const html=await fetchDashboard(key);setStatus('V5 verified. Opening…','good');history.replaceState(null,'','#control-room-v5');document.open();document.write(html);document.close()}catch(e){setStatus(e?.message||'Unable to load Control Room V5.','bad')}finally{busy=false;open.disabled=connect.disabled=false}}
-async function doConnect(){const value=prompt('Paste the fine-grained GitHub token for dueyouapp/kucoin-futures-monitor with Contents: Read-only permission.');if(!value)return;const key=value.trim();try{setStatus('Verifying repository access…');await fetchDashboard(key);if(!save(key))throw new Error('This browser refused to save the token.');await load(key)}catch(e){if(e?.auth)clear();setStatus(e?.message||'GitHub connection failed.','bad')}}
-open.addEventListener('click',()=>load());connect.addEventListener('click',doConnect);if(token())load();else setStatus('Connect the private GitHub token once on this browser.','warn');
+function fail(error){if(error&&error.authFailure)clear();setStatus(error&&error.message?error.message:'Unable to load the verified Control Room.','bad')}
+async function load(override=''){
+  if(busy)return;
+  busy=true;open.disabled=connect.disabled=true;
+  try{
+    if(!core)throw new Error('Launcher verification core failed to load.');
+    const key=String(override||token()).trim();
+    if(!key){setStatus('Connect the private GitHub token once on this browser.','warn');return}
+    setStatus('Verifying runtime-state Release manifest and dashboard SHA-256…');
+    const verified=await core.loadVerifiedDashboard({token:key});
+    setStatus('Verified dashboard loaded. Opening…','good');
+    history.replaceState(null,'','#control-room');
+    document.open();document.write(verified.html);document.close();
+  }catch(error){fail(error)}finally{busy=false;open.disabled=connect.disabled=false}
+}
+async function doConnect(){
+  const value=prompt('Paste the fine-grained GitHub token for dueyouapp/kucoin-futures-monitor with Contents: Read-only permission.');
+  if(!value)return;
+  const key=value.trim();
+  if(!key)return;
+  try{
+    setStatus('Verifying read-only repository access and runtime-state Release…');
+    await core.loadVerifiedDashboard({token:key});
+    if(!save(key))throw new Error('This browser refused to save the token.');
+    await load(key);
+  }catch(error){fail(error)}
+}
+open.addEventListener('click',()=>load());connect.addEventListener('click',doConnect);
+if(token())load();else setStatus('Connect the private GitHub token once on this browser.','warn');
 })();
 </script>
 </body>
