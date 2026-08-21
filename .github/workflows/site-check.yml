@@ -8,6 +8,7 @@ on:
     paths:
       - '**.html'
       - '**.css'
+      - '**.js'
       - 'robots.txt'
       - 'sitemap.xml'
       - 'scripts/**'
